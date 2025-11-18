@@ -1,22 +1,23 @@
 from google.ads.googleads.client import GoogleAdsClient
-from google.ads.googleads.v18.services.types.keyword_plan_idea_service import GenerateKeywordIdeasRequest
-from google.ads.googleads.v18.enums.types.keyword_plan_network import KeywordPlanNetworkEnum
+from google.ads.googleads.errors import GoogleAdsException
 
 
 def fetch_keyword_ideas(query: str, location_id: str):
     client = GoogleAdsClient.load_from_storage("google-ads.yaml")
 
     customer_id = client.login_customer_id
-    service = client.get_service("KeywordPlanIdeaService")
 
-    request = GenerateKeywordIdeasRequest(
-        customer_id=str(customer_id),
-        keyword_plan_network=KeywordPlanNetworkEnum.GOOGLE_SEARCH,
-        keyword_seed={"keywords": [query]},
-        geo_target_constants=[f"geoTargetConstants/{location_id}"],
-    )
+    keyword_plan_idea_service = client.get_service("KeywordPlanIdeaService")
 
-    response = service.generate_keyword_ideas(request=request)
+    # Build request dynamically (v28 uses get_type)
+    request = client.get_type("GenerateKeywordIdeasRequest")
+    request.customer_id = str(customer_id)
+    request.keyword_plan_network = client.enums.KeywordPlanNetworkEnum.GOOGLE_SEARCH
+
+    request.keyword_seed.keywords.append(query)
+    request.geo_target_constants.append(f"geoTargetConstants/{location_id}")
+
+    response = keyword_plan_idea_service.generate_keyword_ideas(request=request)
 
     results = []
     for idea in response:
