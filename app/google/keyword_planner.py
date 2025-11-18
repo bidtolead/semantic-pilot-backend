@@ -1,6 +1,7 @@
 from google.ads.googleads.client import GoogleAdsClient
-from google.ads.googleads.v13.enums.types.keyword_plan_network import KeywordPlanNetworkEnum
-from google.ads.googleads.v13.services.types.keyword_plan_idea_service import GenerateKeywordIdeasRequest
+from google.ads.googleads.v17.enums.types.keyword_plan_network import KeywordPlanNetworkEnum
+from google.ads.googleads.v17.services.types.keyword_plan_idea_service import GenerateKeywordIdeasRequest
+
 
 def fetch_keyword_ideas(query: str, location_id: str):
     client = GoogleAdsClient.load_from_storage("google-ads.yaml")
@@ -20,7 +21,6 @@ def fetch_keyword_ideas(query: str, location_id: str):
     results = []
     for idea in response:
         metrics = idea.keyword_idea_metrics
-
         results.append({
             "keyword": idea.text,
             "avg_monthly_searches": metrics.avg_monthly_searches,
