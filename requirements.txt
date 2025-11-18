@@ -6,4 +6,4 @@ firebase-admin
 google-cloud-firestore
 requests
 openai
-google-ads
+google-ads>=21.0.0
