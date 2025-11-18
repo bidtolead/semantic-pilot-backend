@@ -6,9 +6,4 @@ firebase-admin
 google-cloud-firestore
 requests
 openai
-
-# Google Ads API
-google-ads==21.0.0
-protobuf==4.25.3
-grpcio==1.65.1
-google-api-core==2.15.0
+google-ads
