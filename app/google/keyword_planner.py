@@ -6,18 +6,19 @@ def fetch_keyword_ideas(query: str, location_id: str):
     client = GoogleAdsClient.load_from_storage("google-ads.yaml")
 
     customer_id = client.login_customer_id
+    service = client.get_service("KeywordPlanIdeaService")
 
-    keyword_plan_idea_service = client.get_service("KeywordPlanIdeaService")
-
-    # Build request dynamically (v28 uses get_type)
     request = client.get_type("GenerateKeywordIdeasRequest")
     request.customer_id = str(customer_id)
+
+    # ENUM — dynamic, never version-specific
     request.keyword_plan_network = client.enums.KeywordPlanNetworkEnum.GOOGLE_SEARCH
 
+    # Seeds
     request.keyword_seed.keywords.append(query)
     request.geo_target_constants.append(f"geoTargetConstants/{location_id}")
 
-    response = keyword_plan_idea_service.generate_keyword_ideas(request=request)
+    response = service.generate_keyword_ideas(request=request)
 
     results = []
     for idea in response:
