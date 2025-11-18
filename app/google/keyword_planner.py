@@ -1,21 +1,17 @@
 from google.ads.googleads.client import GoogleAdsClient
-from google.ads.googleads.enums.types.keyword_plan_network import KeywordPlanNetworkEnum
-from google.ads.googleads.services.types.keyword_plan_idea_service import GenerateKeywordIdeasRequest
-
 
 def fetch_keyword_ideas(query: str, location_id: str):
-    # Loads using your google-ads.yaml file
     client = GoogleAdsClient.load_from_storage("google-ads.yaml")
 
     customer_id = client.login_customer_id
     service = client.get_service("KeywordPlanIdeaService")
 
-    request = GenerateKeywordIdeasRequest(
-        customer_id=str(customer_id),
-        keyword_plan_network=KeywordPlanNetworkEnum.GOOGLE_SEARCH,
-        keyword_seed={"keywords": [query]},
-        geo_target_constants=[f"geoTargetConstants/{location_id}"],
-    )
+    request = {
+        "customer_id": str(customer_id),
+        "keyword_plan_network": 2,  # GOOGLE_SEARCH
+        "keyword_seed": {"keywords": [query]},
+        "geo_target_constants": [f"geoTargetConstants/{location_id}"],
+    }
 
     response = service.generate_keyword_ideas(request=request)
 
@@ -25,7 +21,7 @@ def fetch_keyword_ideas(query: str, location_id: str):
         results.append({
             "keyword": idea.text,
             "avg_monthly_searches": metrics.avg_monthly_searches,
-            "competition": metrics.competition.name,
+            "competition": metrics.competition,
         })
 
     return results
