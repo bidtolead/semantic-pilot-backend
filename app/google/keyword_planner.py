@@ -1,9 +1,10 @@
 from google.ads.googleads.client import GoogleAdsClient
-from google.ads.googleads.v17.enums.types.keyword_plan_network import KeywordPlanNetworkEnum
-from google.ads.googleads.v17.services.types.keyword_plan_idea_service import GenerateKeywordIdeasRequest
+from google.ads.googleads.enums.types.keyword_plan_network import KeywordPlanNetworkEnum
+from google.ads.googleads.services.types.keyword_plan_idea_service import GenerateKeywordIdeasRequest
 
 
 def fetch_keyword_ideas(query: str, location_id: str):
+    # Loads using your google-ads.yaml file
     client = GoogleAdsClient.load_from_storage("google-ads.yaml")
 
     customer_id = client.login_customer_id
