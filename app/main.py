@@ -8,7 +8,7 @@ from app.routes.auth import router as auth_router
 from app.routes.firestore import router as firestore_router
 from app.routes.test_db import router as test_db_router
 
-# ✅ NEW — import admin router
+# ✅ ADMIN ROUTER — must be imported
 from app.routes.admin import router as admin_router
 
 app = FastAPI(
@@ -17,11 +17,11 @@ app = FastAPI(
 )
 
 # -------------------------------------------------
-# CORS settings
+# CORS
 # -------------------------------------------------
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],     # ⚠️ You can restrict to domain later
+    allow_origins=["*"],
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -35,8 +35,8 @@ app.include_router(auth_router)
 app.include_router(firestore_router)
 app.include_router(test_db_router)
 
-# ✅ NEW — Admin API mounted under /admin prefix
-app.include_router(admin_router)
+# ✅ IMPORTANT: Register admin router with PREFIX
+app.include_router(admin_router, prefix="/admin")
 
 # -------------------------------------------------
 # Health check
