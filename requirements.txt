@@ -1,6 +1,8 @@
 fastapi
-uvicorn[standard]
+uvicorn
+google-cloud-firestore
+firebase-admin
 pydantic
 python-dotenv
-firebase-admin
-google-ads==21.3.0
+requests
+openai>=1.0.0
