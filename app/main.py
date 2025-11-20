@@ -7,6 +7,8 @@ from app.routes.seo import router as seo_router
 from app.routes.auth import router as auth_router
 from app.routes.firestore import router as firestore_router
 from app.routes.test_db import router as test_db_router
+from app.routes.activity import router as activity_router
+app.include_router(activity_router)
 
 # ✅ Correct import for admin router
 from app.routes.admin import router as admin_router
