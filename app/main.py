@@ -8,8 +8,9 @@ from app.routes.auth import router as auth_router
 from app.routes.firestore import router as firestore_router
 from app.routes.test_db import router as test_db_router
 
-# ✅ ADMIN ROUTER — must be imported
+# ✅ Correct import for admin router
 from app.routes.admin import router as admin_router
+
 
 app = FastAPI(
     title="Semantic Pilot Backend",
@@ -17,7 +18,7 @@ app = FastAPI(
 )
 
 # -------------------------------------------------
-# CORS
+# CORS settings
 # -------------------------------------------------
 app.add_middleware(
     CORSMiddleware,
@@ -35,8 +36,10 @@ app.include_router(auth_router)
 app.include_router(firestore_router)
 app.include_router(test_db_router)
 
-# ✅ IMPORTANT: Register admin router with PREFIX
-app.include_router(admin_router, prefix="/admin")
+# -------------------------------------------------
+# ADMIN ROUTES (with prefix from file)
+# -------------------------------------------------
+app.include_router(admin_router)
 
 # -------------------------------------------------
 # Health check
