@@ -53,4 +53,4 @@ Thumbs.db
 build/
 dist/
 *.egg-info/
-.cache/
+.cache/venv/
