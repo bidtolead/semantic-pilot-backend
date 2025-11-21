@@ -36,7 +36,7 @@ def require_admin(authorization: str | None):
 
 
 # -----------------------------------------------------
-# 📌 GET ALL USERS (now includes heartbeat timestamp)
+# 📌 GET ALL USERS (includes lastHeartbeatAt)
 # -----------------------------------------------------
 @router.get("/users")
 def get_all_users(authorization: str | None = Header(default=None)):
@@ -48,8 +48,8 @@ def get_all_users(authorization: str | None = Header(default=None)):
     for doc in users_ref:
         data = doc.to_dict()
 
-        # Ensure all expected fields exist
-        data.setdefault("lastHeartbeatAt", None)
+        # Ensure expected fields exist
+        data.setdefault("lastHeartbeatAt", None)  # 🔥 FIXED FIELD
         data.setdefault("createdAt", None)
         data.setdefault("lastLoginAt", None)
         data.setdefault("credits", 0)
@@ -140,7 +140,7 @@ def force_logout(uid: str, authorization: str | None = Header(default=None)):
 
 
 # -----------------------------------------------------
-# ❌ Delete User (dangerous)
+# ❌ Delete User
 # -----------------------------------------------------
 @router.delete("/user/{uid}")
 def delete_user(uid: str, authorization: str | None = Header(default=None)):
@@ -149,7 +149,6 @@ def delete_user(uid: str, authorization: str | None = Header(default=None)):
     # Delete Firestore record
     db.collection("users").document(uid).delete()
 
-    # Remove from Firebase Auth (ignore errors)
     try:
         firebase_auth.delete_user(uid)
     except:
