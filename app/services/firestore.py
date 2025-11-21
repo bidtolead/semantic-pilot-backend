@@ -6,36 +6,36 @@ from firebase_admin import credentials, initialize_app, firestore
 def init_firestore():
     """
     Initialize Firestore using JSON credentials stored in an environment variable.
-    This works on Render (where files may not exist) and locally.
+    Works on Render (no filesystem needed) and locally.
     """
 
-    # Get JSON string from environment variable
+    # Try new JSON-based env var
     json_str = os.getenv("GOOGLE_APPLICATION_CREDENTIALS_JSON")
 
-    if not json_str:
-        raise ValueError(
-            "GOOGLE_APPLICATION_CREDENTIALS_JSON is not set. "
-            "Make sure it is added in your Render environment variables."
-        )
+    if json_str:
+        try:
+            cred_info = json.loads(json_str)
+            cred = credentials.Certificate(cred_info)
+        except Exception as e:
+            raise ValueError(f"Invalid GOOGLE_APPLICATION_CREDENTIALS_JSON: {e}")
+    else:
+        # Fallback: file path (local dev only)
+        file_path = os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
+        if not file_path or not os.path.exists(file_path):
+            raise ValueError(
+                "No Firestore credentials found. "
+                "Set GOOGLE_APPLICATION_CREDENTIALS_JSON (Render) or "
+                "GOOGLE_APPLICATION_CREDENTIALS pointing to a file (local)."
+            )
 
-    try:
-        # Parse JSON into dict
-        cred_dict = json.loads(json_str)
-    except json.JSONDecodeError:
-        raise ValueError("GOOGLE_APPLICATION_CREDENTIALS_JSON contains invalid JSON")
+        cred = credentials.Certificate(file_path)
 
-    # Convert dict into Firebase credential object
-    cred = credentials.Certificate(cred_dict)
-
-    # Initialize Firebase app (avoid reinitializing if already done)
-    try:
-        app = initialize_app(cred)
-    except ValueError:
-        # Firebase already initialized — retrieve existing app
-        pass
+    # Initialize only once
+    if not len(firebase_admin._apps):
+        initialize_app(cred)
 
     return firestore.client()
 
 
-# Global Firestore client to import anywhere
+# Initialize Firestore DB
 db = init_firestore()
