@@ -1,25 +1,22 @@
 import os
-from pathlib import Path
-from dotenv import load_dotenv
-from firebase_admin import credentials, initialize_app, firestore
-
-
-# -----------------------------
-# FORCE LOAD .env FROM BACKEND ROOT
-# -----------------------------
-BACKEND_ROOT = Path(__file__).resolve().parents[2]   # goes to semantic-pilot-backend/
-ENV_PATH = BACKEND_ROOT / ".env"
-load_dotenv(dotenv_path=ENV_PATH)
-
+import json
+import firebase_admin
+from firebase_admin import credentials, firestore
 
 def init_firestore():
-    creds_path = os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
-    if not creds_path:
-        raise ValueError("GOOGLE_APPLICATION_CREDENTIALS is not set in .env")
+    firebase_json = os.getenv("GOOGLE_APPLICATION_CREDENTIALS_JSON")
 
-    cred = credentials.Certificate(creds_path)
-    app = initialize_app(cred)
+    if not firebase_json:
+        raise ValueError("GOOGLE_APPLICATION_CREDENTIALS_JSON is not set in Render env")
+
+    # Parse JSON string from environment variable
+    cred_dict = json.loads(firebase_json)
+    cred = credentials.Certificate(cred_dict)
+
+    # Initialize only once
+    if not firebase_admin._apps:
+        firebase_admin.initialize_app(cred)
+
     return firestore.client()
-
 
 db = init_firestore()
