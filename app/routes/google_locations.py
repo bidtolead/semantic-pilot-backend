@@ -2,19 +2,20 @@ from fastapi import APIRouter, HTTPException, Query
 from google.ads.googleads.errors import GoogleAdsException
 from app.services.google_ads import load_google_ads_client
 
-router = APIRouter(prefix="/google-ads", tags=["Google Ads"])
+# IMPORTANT:
+# No prefix here — prefix is applied in main.py using:
+# app.include_router(google_locations_router, prefix="/google")
+router = APIRouter(tags=["Google Ads"])
 
 
-# ------------------------
-# Location Search Endpoint
-# ------------------------
 @router.get("/locations")
 def search_locations(query: str = Query(..., min_length=2)):
     """
-    Location autocomplete using Google Ads API.
-    Replaces old YAML-based version.
+    Autocomplete location search using Google Ads API.
+    Works at:  GET /google/locations?query=auckland
     """
 
+    # Load Google Ads client (env-based config)
     try:
         client, _customer_id = load_google_ads_client()
     except Exception as e:
@@ -43,11 +44,11 @@ def search_locations(query: str = Query(..., min_length=2)):
         geo = suggestion.geo_target_constant
 
         results.append({
-            "id": geo.id,
+            "id": str(geo.id),
             "name": geo.name,
             "countryCode": geo.country_code,
             "targetType": geo.target_type.name,
-            "status": geo.status.name
+            "status": geo.status.name,
         })
 
     return {"results": results}
