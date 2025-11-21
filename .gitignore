@@ -1,6 +1,56 @@
+# ===========================
+# Python
+# ===========================
 __pycache__/
 *.pyc
+*.pyo
+*.pyd
+*.pycache/
+
+# Virtual environment
 venv/
-venv311/
-.env
-service-account.json
+.env/
+.env.local
+*.env
+
+# ===========================
+# Secrets & Credentials
+# ===========================
+client_secret.json
+app/keys/serviceAccountKey.json
+google-ads.yaml
+google-ads.yaml.save
+
+# Any JSON credentials
+*credentials*.json
+*service*.json
+*secret*.json
+
+# Backup files
+*.save
+
+# ===========================
+# OS & IDE Junk
+# ===========================
+.DS_Store
+*.DS_Store
+Thumbs.db
+
+# VSCode
+.vscode/
+
+# PyCharm / JetBrains
+.idea/
+
+# ===========================
+# Logs
+# ===========================
+*.log
+
+# ===========================
+# Build / Cache / Dist
+# ===========================
+build/
+dist/
+*.egg-info/
+.cache/
