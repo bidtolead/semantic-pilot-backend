@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Header, HTTPException
 from firebase_admin import auth as firebase_auth
+from google.cloud import firestore
 from app.services.firestore import db
 
 router = APIRouter(prefix="/admin", tags=["Admin"])
@@ -18,7 +19,7 @@ def require_admin(authorization: str | None):
         decoded = firebase_auth.verify_id_token(token)
         uid = decoded["uid"]
 
-        # Fetch user record from Firestore
+        # Fetch user from Firestore
         doc = db.collection("users").document(uid).get()
 
         if not doc.exists:
@@ -36,7 +37,7 @@ def require_admin(authorization: str | None):
 
 
 # -----------------------------------------------------
-# 📌 GET ALL USERS (includes lastHeartbeatAt)
+# 📌 GET ALL USERS (Unified lastActivity)
 # -----------------------------------------------------
 @router.get("/users")
 def get_all_users(authorization: str | None = Header(default=None)):
@@ -48,8 +49,13 @@ def get_all_users(authorization: str | None = Header(default=None)):
     for doc in users_ref:
         data = doc.to_dict()
 
-        # Ensure expected fields exist
-        data.setdefault("lastHeartbeatAt", None)  # 🔥 FIXED FIELD
+        # 🔥 Normalize activity fields
+        # Heartbeat writes: lastActivity
+        # Frontend reads:   lastActivity
+        data.setdefault("lastActivity", data.get("lastHeartbeatAt"))
+        data.setdefault("lastHeartbeatAt", None)
+
+        # Default fields
         data.setdefault("createdAt", None)
         data.setdefault("lastLoginAt", None)
         data.setdefault("credits", 0)
@@ -58,8 +64,11 @@ def get_all_users(authorization: str | None = Header(default=None)):
         data.setdefault("tokenUsage", 0)
         data.setdefault("totalSpend", 0)
         data.setdefault("role", "user")
+        data.setdefault("banned", False)
 
+        # always return userId
         data["userId"] = doc.id
+
         users.append(data)
 
     return {"users": users}
@@ -71,7 +80,6 @@ def get_all_users(authorization: str | None = Header(default=None)):
 @router.post("/user/{uid}/reset-credits")
 def reset_credits(uid: str, authorization: str | None = Header(default=None)):
     require_admin(authorization)
-
     db.collection("users").document(uid).update({"credits": 50})
     return {"status": "success", "message": "Credits reset to 50"}
 
@@ -101,7 +109,6 @@ def add_credits(uid: str, credits: int = 10, authorization: str | None = Header(
 @router.post("/user/{uid}/make-admin")
 def make_admin(uid: str, authorization: str | None = Header(default=None)):
     require_admin(authorization)
-
     db.collection("users").document(uid).update({"role": "admin"})
     return {"status": "success", "message": "User promoted to admin"}
 
@@ -112,7 +119,6 @@ def make_admin(uid: str, authorization: str | None = Header(default=None)):
 @router.post("/user/{uid}/remove-admin")
 def remove_admin(uid: str, authorization: str | None = Header(default=None)):
     require_admin(authorization)
-
     db.collection("users").document(uid).update({"role": "user"})
     return {"status": "success", "message": "Admin role removed"}
 
@@ -123,7 +129,6 @@ def remove_admin(uid: str, authorization: str | None = Header(default=None)):
 @router.post("/user/{uid}/ban")
 def ban_user(uid: str, authorization: str | None = Header(default=None)):
     require_admin(authorization)
-
     db.collection("users").document(uid).update({"banned": True})
     return {"status": "success", "message": "User has been banned"}
 
@@ -134,7 +139,6 @@ def ban_user(uid: str, authorization: str | None = Header(default=None)):
 @router.post("/user/{uid}/force-logout")
 def force_logout(uid: str, authorization: str | None = Header(default=None)):
     require_admin(authorization)
-
     firebase_auth.revoke_refresh_tokens(uid)
     return {"status": "success", "message": "User will logout on next refresh"}
 
@@ -146,9 +150,9 @@ def force_logout(uid: str, authorization: str | None = Header(default=None)):
 def delete_user(uid: str, authorization: str | None = Header(default=None)):
     require_admin(authorization)
 
-    # Delete Firestore record
     db.collection("users").document(uid).delete()
 
+    # Delete from Firebase Authentication
     try:
         firebase_auth.delete_user(uid)
     except:
