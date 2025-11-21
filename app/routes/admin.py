@@ -36,7 +36,7 @@ def require_admin(authorization: str | None):
 
 
 # -----------------------------------------------------
-# 📌 GET ALL USERS
+# 📌 GET ALL USERS (now includes heartbeat timestamp)
 # -----------------------------------------------------
 @router.get("/users")
 def get_all_users(authorization: str | None = Header(default=None)):
@@ -47,6 +47,18 @@ def get_all_users(authorization: str | None = Header(default=None)):
 
     for doc in users_ref:
         data = doc.to_dict()
+
+        # Ensure all expected fields exist
+        data.setdefault("lastHeartbeatAt", None)
+        data.setdefault("createdAt", None)
+        data.setdefault("lastLoginAt", None)
+        data.setdefault("credits", 0)
+        data.setdefault("plan", "free")
+        data.setdefault("researchCount", 0)
+        data.setdefault("tokenUsage", 0)
+        data.setdefault("totalSpend", 0)
+        data.setdefault("role", "user")
+
         data["userId"] = doc.id
         users.append(data)
 
