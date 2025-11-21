@@ -1,17 +1,24 @@
 from fastapi import APIRouter, Header, HTTPException
 from firebase_admin import auth as firebase_auth
 from app.services.firestore import db
-from google.cloud import firestore
 
 router = APIRouter(prefix="/admin", tags=["Admin"])
 
 
 # -----------------------------------------------------
-# Verify Firebase token + require admin
+# 🔒 Helper: Verify Firebase token & check admin role
 # -----------------------------------------------------
 def require_admin(authorization: str | None):
+    """
+    Extract the Firebase ID token from the Authorization header,
+    verify it, look up the user in Firestore, and ensure they
+    have role == "admin".
+    """
     if not authorization or not authorization.startswith("Bearer "):
-        raise HTTPException(status_code=401, detail="Missing or invalid Authorization header")
+        raise HTTPException(
+            status_code=401,
+            detail="Missing or invalid Authorization header",
+        )
 
     token = authorization.split(" ")[1]
 
@@ -19,11 +26,14 @@ def require_admin(authorization: str | None):
         decoded = firebase_auth.verify_id_token(token)
         uid = decoded["uid"]
 
-        user_doc = db.collection("users").document(uid).get()
-        if not user_doc.exists:
+        # Fetch user record from Firestore
+        doc = db.collection("users").document(uid).get()
+
+        if not doc.exists:
             raise HTTPException(status_code=403, detail="User not found in database")
 
-        user = user_doc.to_dict()
+        user = doc.to_dict() or {}
+
         if user.get("role") != "admin":
             raise HTTPException(status_code=403, detail="Admin access required")
 
@@ -34,20 +44,35 @@ def require_admin(authorization: str | None):
 
 
 # -----------------------------------------------------
-# GET ALL USERS
+# 📌 GET ALL USERS (includes heartbeat → lastActivity)
 # -----------------------------------------------------
 @router.get("/users")
 def get_all_users(authorization: str | None = Header(default=None)):
+    """
+    Return all users with normalized fields so the frontend
+    can safely display them. In particular we normalize the
+    heartbeat field into `lastActivity`.
+    """
     require_admin(authorization)
 
     users_ref = db.collection("users").stream()
     users = []
 
     for doc in users_ref:
-        data = doc.to_dict()
+        data = doc.to_dict() or {}
 
-        # Ensure all expected fields exist
-        data.setdefault("lastActivity", None)      # ← IMPORTANT
+        # ---------------------------------------------
+        # 🔥 Normalize heartbeat → lastActivity
+        # ---------------------------------------------
+        # The heartbeat endpoint writes `lastHeartbeatAt`.
+        # The admin frontend expects `lastActivity`.
+        last_hb = data.get("lastHeartbeatAt")
+        if last_hb and "lastActivity" not in data:
+            data["lastActivity"] = last_hb
+
+        # Ensure expected fields exist so TS/front-end
+        # can rely on them without lots of undefined checks.
+        data.setdefault("lastActivity", None)
         data.setdefault("createdAt", None)
         data.setdefault("lastLoginAt", None)
         data.setdefault("credits", 0)
@@ -57,6 +82,7 @@ def get_all_users(authorization: str | None = Header(default=None)):
         data.setdefault("totalSpend", 0)
         data.setdefault("role", "user")
 
+        # Add Firestore document ID as userId
         data["userId"] = doc.id
         users.append(data)
 
@@ -64,7 +90,7 @@ def get_all_users(authorization: str | None = Header(default=None)):
 
 
 # -----------------------------------------------------
-# RESET CREDITS
+# 📌 Reset Credits
 # -----------------------------------------------------
 @router.post("/user/{uid}/reset-credits")
 def reset_credits(uid: str, authorization: str | None = Header(default=None)):
@@ -75,10 +101,18 @@ def reset_credits(uid: str, authorization: str | None = Header(default=None)):
 
 
 # -----------------------------------------------------
-# ADD CREDITS
+# 📌 Add Credits
 # -----------------------------------------------------
 @router.post("/user/{uid}/add-credits")
-def add_credits(uid: str, credits: int = 10, authorization: str | None = Header(default=None)):
+def add_credits(
+    uid: str,
+    credits: int = 10,
+    authorization: str | None = Header(default=None),
+):
+    """
+    Add `credits` to the user's current credit balance.
+    Frontend should send `{ "credits": <amount> }` in JSON.
+    """
     require_admin(authorization)
 
     user_ref = db.collection("users").document(uid)
@@ -94,7 +128,7 @@ def add_credits(uid: str, credits: int = 10, authorization: str | None = Header(
 
 
 # -----------------------------------------------------
-# MAKE ADMIN
+# 📌 Make Admin
 # -----------------------------------------------------
 @router.post("/user/{uid}/make-admin")
 def make_admin(uid: str, authorization: str | None = Header(default=None)):
@@ -105,7 +139,7 @@ def make_admin(uid: str, authorization: str | None = Header(default=None)):
 
 
 # -----------------------------------------------------
-# REMOVE ADMIN
+# 📌 Remove Admin
 # -----------------------------------------------------
 @router.post("/user/{uid}/remove-admin")
 def remove_admin(uid: str, authorization: str | None = Header(default=None)):
@@ -116,29 +150,29 @@ def remove_admin(uid: str, authorization: str | None = Header(default=None)):
 
 
 # -----------------------------------------------------
-# BAN USER
+# 📌 Ban User
 # -----------------------------------------------------
 @router.post("/user/{uid}/ban")
 def ban_user(uid: str, authorization: str | None = Header(default=None)):
     require_admin(authorization)
 
     db.collection("users").document(uid).update({"banned": True})
-    return {"status": "success", "message": "User banned"}
+    return {"status": "success", "message": "User has been banned"}
 
 
 # -----------------------------------------------------
-# FORCE LOGOUT
+# 📌 Force logout (revoke tokens)
 # -----------------------------------------------------
 @router.post("/user/{uid}/force-logout")
 def force_logout(uid: str, authorization: str | None = Header(default=None)):
     require_admin(authorization)
 
     firebase_auth.revoke_refresh_tokens(uid)
-    return {"status": "success", "message": "User will be logged out next refresh"}
+    return {"status": "success", "message": "User will logout on next refresh"}
 
 
 # -----------------------------------------------------
-# DELETE USER
+# ❌ Delete User
 # -----------------------------------------------------
 @router.delete("/user/{uid}")
 def delete_user(uid: str, authorization: str | None = Header(default=None)):
@@ -147,10 +181,11 @@ def delete_user(uid: str, authorization: str | None = Header(default=None)):
     # Delete Firestore record
     db.collection("users").document(uid).delete()
 
-    # Delete Firebase Auth account (ignore errors)
+    # Try to delete from Firebase Auth as well
     try:
         firebase_auth.delete_user(uid)
-    except:
+    except Exception:
+        # Ignore if user doesn't exist in Auth
         pass
 
     return {"status": "success", "message": "User deleted"}
