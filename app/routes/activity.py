@@ -1,13 +1,13 @@
 from fastapi import APIRouter, Header, HTTPException
 from firebase_admin import auth as firebase_auth
 from app.services.firestore import db
-from google.cloud import firestore   # required
+from google.cloud import firestore  # REQUIRED for SERVER_TIMESTAMP
 
 router = APIRouter(prefix="/activity", tags=["Activity"])
 
 
 # -----------------------------------------------------
-# Helper: extract UID from Firebase token
+# Helper: Extract UID from Firebase token
 # -----------------------------------------------------
 def get_uid_from_header(authorization: str | None):
     if not authorization or not authorization.startswith("Bearer "):
@@ -19,15 +19,19 @@ def get_uid_from_header(authorization: str | None):
 
 
 # -----------------------------------------------------
-# Heartbeat — called every 60 sec by frontend
+# 🔥 Heartbeat — called every 60 sec from frontend
 # -----------------------------------------------------
 @router.post("/heartbeat")
 def heartbeat(authorization: str | None = Header(default=None)):
     uid = get_uid_from_header(authorization)
 
-    # 🔥 FIXED: backend now uses "lastHeartbeatAt" to match frontend
+    # IMPORTANT FIX:
+    # Write BOTH fields:
+    #   lastHeartbeatAt → raw heartbeat timestamp
+    #   lastActivity    → field used by Admin Dashboard
     db.collection("users").document(uid).update({
-        "lastHeartbeatAt": firestore.SERVER_TIMESTAMP,   # <-- IMPORTANT FIX
+        "lastHeartbeatAt": firestore.SERVER_TIMESTAMP,
+        "lastActivity": firestore.SERVER_TIMESTAMP,  # 👈 REQUIRED FOR ONLINE STATUS
         "online": True,
     })
 
