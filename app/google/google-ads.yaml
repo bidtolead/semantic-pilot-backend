@@ -1,6 +1,0 @@
-developer_token: "YOUR_TOKEN"
-client_id: "YOUR_OAUTH_CLIENT_ID"
-client_secret: "YOUR_OAUTH_CLIENT_SECRET"
-refresh_token: "YOUR_REFRESH_TOKEN"
-login_customer_id: "YOUR_MANAGER_ACCOUNT_ID"
-client_customer_id: "YOUR_ADS_ACCOUNT_ID"
