@@ -1,22 +1,41 @@
 import os
 import json
-import firebase_admin
-from firebase_admin import credentials, firestore
+from firebase_admin import credentials, initialize_app, firestore
+
 
 def init_firestore():
-    firebase_json = os.getenv("GOOGLE_APPLICATION_CREDENTIALS_JSON")
+    """
+    Initialize Firestore using JSON credentials stored in an environment variable.
+    This works on Render (where files may not exist) and locally.
+    """
 
-    if not firebase_json:
-        raise ValueError("GOOGLE_APPLICATION_CREDENTIALS_JSON is not set in Render env")
+    # Get JSON string from environment variable
+    json_str = os.getenv("GOOGLE_APPLICATION_CREDENTIALS_JSON")
 
-    # Parse JSON string from environment variable
-    cred_dict = json.loads(firebase_json)
+    if not json_str:
+        raise ValueError(
+            "GOOGLE_APPLICATION_CREDENTIALS_JSON is not set. "
+            "Make sure it is added in your Render environment variables."
+        )
+
+    try:
+        # Parse JSON into dict
+        cred_dict = json.loads(json_str)
+    except json.JSONDecodeError:
+        raise ValueError("GOOGLE_APPLICATION_CREDENTIALS_JSON contains invalid JSON")
+
+    # Convert dict into Firebase credential object
     cred = credentials.Certificate(cred_dict)
 
-    # Initialize only once
-    if not firebase_admin._apps:
-        firebase_admin.initialize_app(cred)
+    # Initialize Firebase app (avoid reinitializing if already done)
+    try:
+        app = initialize_app(cred)
+    except ValueError:
+        # Firebase already initialized — retrieve existing app
+        pass
 
     return firestore.client()
 
+
+# Global Firestore client to import anywhere
 db = init_firestore()
