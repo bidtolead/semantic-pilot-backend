@@ -40,16 +40,26 @@ def load_google_ads_client():
     return client, customer_id
 
 
-def fetch_keyword_ideas(seed_keywords: list[str], geo_id: int = 2840):
+def fetch_keyword_ideas(
+    seed_keywords: list[str] = None,
+    geo_id: int = 2840,
+    landing_page: str = None,
+    competitor_urls: list[str] = None
+):
     """Fetch keyword ideas from Google Ads KeywordPlanIdeaService.
 
     Args:
         seed_keywords: List of seed keywords.
         geo_id: Geo target constant ID (default USA 2840).
+        landing_page: Optional landing page URL to analyze.
+        competitor_urls: Optional list of competitor URLs to analyze.
     Returns:
         list[dict]: Simplified keyword idea metrics.
     """
-    if not seed_keywords:
+    seed_keywords = seed_keywords or []
+    competitor_urls = competitor_urls or []
+    
+    if not seed_keywords and not landing_page and not competitor_urls:
         return []
 
     client, customer_id = load_google_ads_client()
@@ -71,6 +81,15 @@ def fetch_keyword_ideas(seed_keywords: list[str], geo_id: int = 2840):
     for kw in seed_keywords:
         if kw and isinstance(kw, str):
             request.keyword_seed.keywords.append(kw)
+    
+    # Add landing page URL if provided
+    if landing_page:
+        request.url_seed.url = landing_page
+    
+    # Add competitor URLs if provided
+    for url in competitor_urls:
+        if url and isinstance(url, str):
+            request.url_seed.url = url
 
     try:
         response = service.generate_keyword_ideas(request=request)
