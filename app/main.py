@@ -29,9 +29,10 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "https://semantic-pilot-frontend.vercel.app",
-        "https://semantic-pilot-frontend-*--timurs-projects.vercel.app",
         "http://localhost:3000",
     ],
+    # Allow Vercel preview deployments for this project
+    allow_origin_regex=r"^https://semantic-pilot-frontend-[a-zA-Z0-9-]+\.vercel\.app$",
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allow_headers=[
