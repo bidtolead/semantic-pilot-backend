@@ -2,7 +2,7 @@ from fastapi import APIRouter, HTTPException, Query
 from typing import List, Dict, Any
 from app.services.google_ads import load_google_ads_client
 
-router = APIRouter(prefix="/google-ads/geo", tags=["Geo"])
+router = APIRouter(prefix="/geo", tags=["Geo"])
 
 ALLOWED_COUNTRY_CODES = {
     "US", "CA", "GB", "IE", "AU", "NZ",
