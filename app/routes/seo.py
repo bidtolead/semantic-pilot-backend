@@ -156,3 +156,154 @@ async def keyword_research(
         "status": "ok",
         "intakeId": req.intakeId
     }
+
+
+@router.get("/keyword-research/run/{userId}/{intakeId}")
+async def run_keyword_research(
+    userId: str,
+    intakeId: str,
+    authorization: str | None = Header(default=None)
+):
+    """
+    Execute keyword research based on a stored intake form.
+    
+    This endpoint:
+    1. Loads intake from Firestore
+    2. Resolves target location to GEO_ID
+    3. Prepares seed keywords from intake fields
+    4. Calls Google Keyword Planner API
+    5. Saves raw results to Firestore under intakes/{userId}/{intakeId}/keyword_research/raw_output
+    """
+    uid = get_uid(authorization)
+    
+    # Security check: ensure the authenticated user matches the userId in path
+    if uid != userId:
+        raise HTTPException(status_code=403, detail="Unauthorized access to this intake")
+    
+    # 1. Load intake from Firestore
+    # Document ID format: {userId}_{intakeId}
+    doc_id = f"{userId}_{intakeId}"
+    intake_ref = db.collection("research_intakes").document(doc_id)
+    intake_doc = intake_ref.get()
+    
+    if not intake_doc.exists:
+        raise HTTPException(
+            status_code=404, 
+            detail=f"Intake not found for userId={userId}, intakeId={intakeId}"
+        )
+    
+    intake = intake_doc.to_dict()
+    
+    # 2. Extract target location and resolve to GEO_ID
+    target_location = intake.get("target_location", "").strip()
+    if not target_location:
+        raise HTTPException(
+            status_code=400, 
+            detail="target_location is missing in intake data"
+        )
+    
+    # Call geo suggest service to find matching GEO_ID
+    geo_id = None
+    try:
+        client, _ = load_google_ads_client()
+        service = client.get_service("GeoTargetConstantService")
+        geo_request = client.get_type("SuggestGeoTargetConstantsRequest")
+        geo_request.locale = "en"
+        geo_request.location_names.names.append(target_location)
+        
+        response = service.suggest_geo_target_constants(request=geo_request)
+        
+        # Find first enabled geo target
+        for suggestion in response.geo_target_constant_suggestions:
+            geo = suggestion.geo_target_constant
+            if geo.status.name == "ENABLED":
+                geo_id = str(geo.id)
+                break
+        
+        if not geo_id:
+            raise HTTPException(
+                status_code=400,
+                detail=f"No matching geo target found for location: {target_location}"
+            )
+    
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to resolve location '{target_location}': {str(e)}"
+        )
+    
+    # 3. Prepare seed keywords from intake
+    # Combine relevant fields into seed keywords
+    seed_keywords = []
+    
+    # Add suggested_search_terms (split by comma)
+    suggested_terms = intake.get("suggested_search_terms", "").strip()
+    if suggested_terms:
+        terms = [t.strip() for t in suggested_terms.split(",") if t.strip()]
+        seed_keywords.extend(terms)
+    
+    # Optionally add product/service description as a seed
+    product_desc = intake.get("product_service_description", "").strip()
+    if product_desc and len(product_desc) < 100:  # Only if reasonably short
+        seed_keywords.append(product_desc)
+    
+    # If no seed keywords found, return error
+    if not seed_keywords:
+        raise HTTPException(
+            status_code=400,
+            detail="No seed keywords found. Please provide 'suggested_search_terms' in the intake."
+        )
+    
+    # 4. Call fetch_keyword_ideas() from google_ads.py
+    try:
+        raw_output = fetch_keyword_ideas(
+            seed_keywords=seed_keywords,
+            geo_id=int(geo_id)
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Google Keyword Planner API failed: {str(e)}"
+        )
+    
+    # 5. Save raw results to Firestore
+    # Path: intakes/{userId}/{intakeId}/keyword_research/raw_output
+    try:
+        # Create nested collection structure
+        keyword_research_ref = (
+            db.collection("intakes")
+            .document(userId)
+            .collection(intakeId)
+            .document("keyword_research")
+        )
+        
+        keyword_research_ref.set({
+            "raw_output": raw_output,
+            "createdAt": gcfirestore.SERVER_TIMESTAMP,
+            "status": "completed",
+            "geo_id": geo_id,
+            "target_location": target_location,
+            "seed_keywords_used": seed_keywords,
+            # Store metadata from intake for reference
+            "metadata": {
+                "keyword_intent": intake.get("keyword_intent"),
+                "buyer_journey_stage": intake.get("buyer_journey_stage"),
+                "keyword_performance": intake.get("keyword_performance"),
+            }
+        })
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to save results to Firestore: {str(e)}"
+        )
+    
+    # 6. Return success response
+    return {
+        "success": True,
+        "message": "Keyword research completed successfully",
+        "keywords_found": len(raw_output),
+        "userId": userId,
+        "intakeId": intakeId
+    }
