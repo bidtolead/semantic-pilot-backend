@@ -70,9 +70,8 @@ def fetch_keyword_ideas(
     request = client.get_type("GenerateKeywordIdeasRequest")
     request.customer_id = customer_id
 
-    # Language set to English by default; could be parameterized later.
-    language_constant = client.get_type("StringValue")
-    request.language = "en"
+    # Language set to English (language constant resource name)
+    request.language = "languageConstants/1000"
 
     # Geo target constants
     request.geo_target_constants.append(f"geoTargetConstants/{geo_id}")
