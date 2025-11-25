@@ -7,53 +7,46 @@ from app.utils.prompts import KEYWORD_RESEARCH_PROMPT
 client = OpenAI()
 
 def run_keyword_research_pipeline(intake: dict):
-    """
-    Runs the keyword research pipeline using GPT-4o-mini
-    and returns both the parsed JSON output + token usage.
-    """
+    """Run keyword research via OpenAI, with robust error handling.
 
-    # Inject intake into prompt (as formatted JSON)
+    Returns dict with result JSON and usage metrics.
+    Raises ValueError / RuntimeError for downstream handling.
+    """
     prompt = KEYWORD_RESEARCH_PROMPT.format(
         intake_json=json.dumps(intake, indent=2)
     )
 
-    # -----------------------------
-    # 🧠 Call OpenAI API
-    # -----------------------------
-    response = client.chat.completions.create(
-        model="gpt-4o-mini",
-        response_format={"type": "json_object"},
-        messages=[
-            {
-                "role": "system",
-                "content": (
-                    "You are a keyword research engine. "
-                    "Always return valid and clean JSON — no prose."
-                )
-            },
-            {
-                "role": "user",
-                "content": prompt
-            }
-        ],
-    )
+    try:
+        response = client.chat.completions.create(
+            model="gpt-4o-mini",
+            response_format={"type": "json_object"},
+            messages=[
+                {
+                    "role": "system",
+                    "content": (
+                        "You are a keyword research engine. "
+                        "Always return valid and clean JSON — no prose."
+                    ),
+                },
+                {"role": "user", "content": prompt},
+            ],
+        )
+    except Exception as e:
+        raise RuntimeError(f"OpenAI API request failed: {e}")
 
-    # -----------------------------
-    # Extract assistant JSON output
-    # -----------------------------
+    if not response.choices:
+        raise RuntimeError("OpenAI returned no choices")
+
     content = response.choices[0].message.content
-    result_json = json.loads(content)
+    try:
+        result_json = json.loads(content)
+    except json.JSONDecodeError as e:
+        raise ValueError(f"Invalid JSON from model: {e}: {content[:200]}")
 
-    # -----------------------------
-    # Extract token usage
-    # -----------------------------
     usage = {
-        "prompt_tokens": response.usage.prompt_tokens if response.usage else 0,
-        "completion_tokens": response.usage.completion_tokens if response.usage else 0,
-        "total_tokens": response.usage.total_tokens if response.usage else 0,
+        "prompt_tokens": getattr(getattr(response, "usage", None), "prompt_tokens", 0),
+        "completion_tokens": getattr(getattr(response, "usage", None), "completion_tokens", 0),
+        "total_tokens": getattr(getattr(response, "usage", None), "total_tokens", 0),
     }
 
-    return {
-        "result": result_json,
-        "usage": usage
-    }
+    return {"result": result_json, "usage": usage}

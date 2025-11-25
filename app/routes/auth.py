@@ -93,11 +93,7 @@ def get_current_user(authorization: str | None = Header(default=None)):
 
 
 # ----------------------------------------
-# PLACEHOLDER AUTH ROUTES
-# ----------------------------------------
-@router.post("/login")
-def login():
-    return {"message": "login ok"}
+# (Removed obsolete placeholder /login endpoint; Firebase handles auth client-side.)
 
 
 @router.post("/register")

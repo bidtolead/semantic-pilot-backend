@@ -1,7 +1,8 @@
 from fastapi import APIRouter, Header, HTTPException
 from app.models.seo_models import ResearchRequest
 from firebase_admin import auth as firebase_auth
-from app.google.keyword_planner import fetch_keyword_ideas
+from google.cloud import firestore as gcfirestore
+from app.services.google_ads import fetch_keyword_ideas
 from app.services.firestore import db
 
 router = APIRouter()
@@ -24,14 +25,21 @@ async def run_research(
 
     uid = get_uid(authorization)
 
-    # Firestore increment
+    # Ensure user document exists before updates
     user_ref = db.collection("users").document(uid)
+    snapshot = user_ref.get()
+    if not snapshot.exists:
+        user_ref.set({
+            "researchCount": 0,
+            "createdAt": gcfirestore.SERVER_TIMESTAMP,
+            "lastActivity": gcfirestore.SERVER_TIMESTAMP,
+            "online": True,
+        })
+
+    # Atomic increment + activity update
     user_ref.update({
-        "researchCount": db.SERVER_TIMESTAMP,  # ensure doc exists
-    })
-    user_ref.update({
-        "researchCount": db.Increment(1),
-        "lastActivity": db.SERVER_TIMESTAMP,
+        "researchCount": gcfirestore.Increment(1),
+        "lastActivity": gcfirestore.SERVER_TIMESTAMP,
         "online": True,
     })
 

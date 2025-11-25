@@ -3,32 +3,30 @@ from google.ads.googleads.client import GoogleAdsClient
 
 
 def load_google_ads_client():
-    """
-    Initializes the Google Ads client using environment variables instead
-    of a google-ads.yaml file (recommended for Render deployments).
-    """
+    """Initialize Google Ads client using environment variables.
 
-    # Read env vars
+    Raises:
+        ValueError: if required environment variables are missing.
+    Returns:
+        tuple[GoogleAdsClient, str | None]: client instance and customer ID.
+    """
     developer_token = os.getenv("GOOGLE_ADS_DEVELOPER_TOKEN")
     client_id = os.getenv("GOOGLE_ADS_CLIENT_ID")
     client_secret = os.getenv("GOOGLE_ADS_CLIENT_SECRET")
     refresh_token = os.getenv("GOOGLE_ADS_REFRESH_TOKEN")
-    login_customer_id = os.getenv("GOOGLE_ADS_LOGIN_CUSTOMER_ID")  # Manager account ID
-    customer_id = os.getenv("GOOGLE_ADS_CUSTOMER_ID")  # The actual Ads account
+    login_customer_id = os.getenv("GOOGLE_ADS_LOGIN_CUSTOMER_ID")
+    customer_id = os.getenv("GOOGLE_ADS_CUSTOMER_ID")
 
-    # Validate required environment variables
     required = {
         "GOOGLE_ADS_DEVELOPER_TOKEN": developer_token,
         "GOOGLE_ADS_CLIENT_ID": client_id,
         "GOOGLE_ADS_CLIENT_SECRET": client_secret,
         "GOOGLE_ADS_REFRESH_TOKEN": refresh_token,
     }
-
-    missing = [key for key, value in required.items() if not value]
+    missing = [k for k, v in required.items() if not v]
     if missing:
         raise ValueError(f"Missing Google Ads env vars: {', '.join(missing)}")
 
-    # Google Ads configuration dict
     config = {
         "developer_token": developer_token,
         "client_id": client_id,
@@ -38,6 +36,57 @@ def load_google_ads_client():
         "use_proto_plus": True,
     }
 
-    # Return both: client + customer_id for API calls
     client = GoogleAdsClient.load_from_dict(config)
     return client, customer_id
+
+
+def fetch_keyword_ideas(seed_keywords: list[str], geo_id: int = 2840):
+    """Fetch keyword ideas from Google Ads KeywordPlanIdeaService.
+
+    Args:
+        seed_keywords: List of seed keywords.
+        geo_id: Geo target constant ID (default USA 2840).
+    Returns:
+        list[dict]: Simplified keyword idea metrics.
+    """
+    if not seed_keywords:
+        return []
+
+    client, customer_id = load_google_ads_client()
+    if not customer_id:
+        raise ValueError("GOOGLE_ADS_CUSTOMER_ID missing.")
+
+    service = client.get_service("KeywordPlanIdeaService")
+    request = client.get_type("GenerateKeywordIdeasRequest")
+    request.customer_id = customer_id
+
+    # Language set to English by default; could be parameterized later.
+    language_constant = client.get_type("StringValue")
+    request.language = "en"
+
+    # Geo target constants
+    request.geo_target_constants.append(f"geoTargetConstants/{geo_id}")
+
+    # Add seed keywords
+    for kw in seed_keywords:
+        if kw and isinstance(kw, str):
+            request.keyword_seed.keywords.append(kw)
+
+    try:
+        response = service.generate_keyword_ideas(request=request)
+    except Exception as e:
+        raise Exception(f"Google Ads generate_keyword_ideas failed: {e}")
+
+    results: list[dict] = []
+    for idea in response:
+        metrics = idea.keyword_idea_metrics
+        results.append({
+            "keyword": idea.text,
+            "avg_monthly_searches": metrics.avg_monthly_searches,
+            "competition": metrics.competition.name if metrics.competition else None,
+            "competition_index": metrics.competition_index,
+            "low_top_of_page_bid_micros": metrics.low_top_of_page_bid_micros,
+            "high_top_of_page_bid_micros": metrics.high_top_of_page_bid_micros,
+        })
+
+    return results

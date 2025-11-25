@@ -28,9 +28,9 @@ app = FastAPI(
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
-        "*",
         "https://semantic-pilot-frontend.vercel.app",
         "https://semantic-pilot-frontend-*--timurs-projects.vercel.app",
+        "http://localhost:3000",
     ],
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
@@ -41,10 +41,7 @@ app.add_middleware(
         "Accept",
         "Origin",
     ],
-    expose_headers=[
-        "Content-Type",
-        "Authorization",
-    ],
+    expose_headers=["Content-Type", "Authorization"],
 )
 
 # -------------------------------------------------
