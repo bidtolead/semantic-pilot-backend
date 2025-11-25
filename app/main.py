@@ -55,7 +55,7 @@ app.include_router(firestore_router)
 app.include_router(test_db_router)
 
 # Admin endpoints
-app.include_router(admin_router, prefix="/admin")
+app.include_router(admin_router)
 
 # Heartbeat for tracking user activity
 app.include_router(activity_router)
