@@ -61,7 +61,7 @@ def suggest_geo_targets(q: str = Query(..., min_length=2, max_length=80)):
             "id": str(geo.id),
             "name": geo.name,
             "countryCode": country,
-            "targetType": geo.target_type.name,
+           "targetType": geo.target_type,  # <-- FIXED
         })
 
     priority = {"COUNTRY": 0, "REGION": 1, "METRO": 2, "CITY": 3}
