@@ -202,6 +202,11 @@ async def run_keyword_research(
             detail="target_location is missing in intake data"
         )
     
+    # Clean location string - remove parentheses and extra info
+    # Example: "Auckland (City - NZ)" -> "Auckland"
+    if "(" in target_location:
+        target_location = target_location.split("(")[0].strip()
+    
     # Call geo suggest service to find matching GEO_ID
     geo_id = None
     try:
