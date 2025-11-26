@@ -86,8 +86,9 @@ def run_keyword_ai_filter(
     """
     prompt_template = _load_prompt_text()
 
-    # Limit Google keyword ideas to at most 50 for AI processing
-    limited_keywords = raw_output[:50] if isinstance(raw_output, list) else []
+    # Limit Google keyword ideas to at most 200 for AI processing
+    # This allows the AI to select from a larger pool while staying within token limits
+    limited_keywords = raw_output[:200] if isinstance(raw_output, list) else []
 
     # Build prompt with injected JSON blocks
     prompt = prompt_template
