@@ -391,3 +391,81 @@ async def run_keyword_research(
         "intakeId": intakeId,
         "structured_saved": True
     }
+
+
+@router.get("/keyword-research/debug/{userId}/{intakeId}")
+async def debug_keyword_research(
+    userId: str,
+    intakeId: str,
+    authorization: str | None = Header(default=None)
+):
+    """
+    Debug endpoint to view raw Google Ads data vs AI-processed data.
+    Returns both the raw Google API response and the final structured keywords.
+    """
+    uid = get_uid(authorization)
+    
+    # Security check
+    if uid != userId:
+        raise HTTPException(status_code=403, detail="Unauthorized")
+    
+    # Fetch raw Google data
+    raw_ref = (
+        db.collection("intakes")
+        .document(userId)
+        .collection(intakeId)
+        .document("keyword_research")
+    )
+    raw_doc = raw_ref.get()
+    
+    if not raw_doc.exists:
+        raise HTTPException(status_code=404, detail="No keyword research found")
+    
+    raw_data = raw_doc.to_dict()
+    raw_output = raw_data.get("raw_output", [])
+    
+    # Fetch processed/structured data
+    structured_keywords = {
+        "primary_keywords": raw_data.get("primary_keywords", []),
+        "secondary_keywords": raw_data.get("secondary_keywords", []),
+        "long_tail_keywords": raw_data.get("long_tail_keywords", []),
+    }
+    
+    # Build comparison report
+    comparison = []
+    all_structured = (
+        structured_keywords.get("primary_keywords", []) +
+        structured_keywords.get("secondary_keywords", []) +
+        structured_keywords.get("long_tail_keywords", [])
+    )
+    
+    for kw in all_structured:
+        keyword_text = kw.get("keyword", "").lower()
+        ai_volume = kw.get("search_volume")
+        
+        # Find matching keyword in raw Google data
+        google_match = next(
+            (item for item in raw_output if item.get("keyword", "").lower() == keyword_text),
+            None
+        )
+        
+        google_volume = google_match.get("avg_monthly_searches") if google_match else None
+        
+        comparison.append({
+            "keyword": kw.get("keyword"),
+            "google_volume": google_volume,
+            "ai_volume": ai_volume,
+            "match": google_volume == ai_volume if google_volume is not None else None,
+            "category": "primary" if kw in structured_keywords.get("primary_keywords", []) else 
+                       "secondary" if kw in structured_keywords.get("secondary_keywords", []) else "long_tail"
+        })
+    
+    return {
+        "userId": userId,
+        "intakeId": intakeId,
+        "total_google_keywords": len(raw_output),
+        "total_structured_keywords": len(all_structured),
+        "comparison": comparison,
+        "raw_google_sample": raw_output[:10],  # First 10 for inspection
+        "mismatches": [c for c in comparison if c.get("match") == False],
+    }
