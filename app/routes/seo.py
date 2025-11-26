@@ -313,6 +313,25 @@ async def run_keyword_research(
             user_id=userId,
             research_id=intakeId,
         )
+
+        # Mirror structured results back into the intake keyword_research doc
+        # so existing frontend views that read from the intakes path work
+        try:
+            mirror_ref = (
+                db.collection("intakes")
+                .document(userId)
+                .collection(intakeId)
+                .document("keyword_research")
+            )
+            mirror_ref.set({
+                "primary_keywords": structured.get("primary_keywords", []),
+                "secondary_keywords": structured.get("secondary_keywords", []),
+                "long_tail_keywords": structured.get("long_tail_keywords", []),
+                "status": "completed",
+            }, merge=True)
+        except Exception:
+            # Non-fatal: if mirroring fails, the canonical copy still exists under research/{userId}/{intakeId}
+            pass
     except Exception as e:
         # Do not fail the entire flow if AI post-processing fails; return raw stats with error
         raise HTTPException(
