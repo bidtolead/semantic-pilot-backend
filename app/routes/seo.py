@@ -180,6 +180,25 @@ async def run_keyword_research(
     if uid != userId:
         raise HTTPException(status_code=403, detail="Unauthorized access to this intake")
     
+    # Increment research count for user
+    user_ref = db.collection("users").document(userId)
+    user_snapshot = user_ref.get()
+    if not user_snapshot.exists:
+        user_ref.set({
+            "researchCount": 0,
+            "tokenUsage": 0,
+            "createdAt": gcfirestore.SERVER_TIMESTAMP,
+            "lastActivity": gcfirestore.SERVER_TIMESTAMP,
+            "online": True,
+        })
+    
+    # Atomic increment of research count
+    user_ref.update({
+        "researchCount": gcfirestore.Increment(1),
+        "lastActivity": gcfirestore.SERVER_TIMESTAMP,
+        "online": True,
+    })
+    
     # 1. Load intake from Firestore
     # Document ID format: {userId}_{intakeId}
     doc_id = f"{userId}_{intakeId}"

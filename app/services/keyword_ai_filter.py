@@ -101,14 +101,22 @@ def run_keyword_ai_filter(
         json.dumps(limited_keywords, ensure_ascii=False, indent=2, default=_json_default),
     )
 
+    # Load model from system settings or use default
+    model = "gpt-4o-mini"  # default
+    try:
+        settings_ref = db.collection("system_settings").document("openai")
+        settings_doc = settings_ref.get()
+        if settings_doc.exists:
+            settings_data = settings_doc.to_dict()
+            model = settings_data.get("model", "gpt-4o-mini")
+    except Exception:
+        # Fallback to default if settings not available
+        pass
+
     try:
         response = client.chat.completions.create(
-            # Prefer a faster model; allow quick override via OPENAI_FAST_MODEL
-            model=(
-                os.getenv("OPENAI_FAST_MODEL")
-                or os.getenv("OPENAI_MODEL")
-                or "gpt-4o-mini"
-            ),
+            # Use model from admin settings or env override
+            model=os.getenv("OPENAI_MODEL") or model,
             response_format={"type": "json_object"},
             messages=[
                 {

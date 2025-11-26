@@ -189,3 +189,55 @@ def delete_user(uid: str, authorization: str | None = Header(default=None)):
         pass
 
     return {"status": "success", "message": "User deleted"}
+
+
+# -----------------------------------------------------
+# 📌 UPDATE SYSTEM SETTINGS (OpenAI Model)
+# -----------------------------------------------------
+from pydantic import BaseModel
+
+class ModelUpdateRequest(BaseModel):
+    model: str
+
+@router.post("/settings/model")
+def update_openai_model(
+    req: ModelUpdateRequest,
+    authorization: str | None = Header(default=None)
+):
+    """Update the OpenAI model to use for keyword research"""
+    require_admin(authorization)
+    
+    # Validate model name
+    allowed_models = ["gpt-4o-mini", "gpt-4o", "gpt-4-turbo", "gpt-3.5-turbo"]
+    if req.model not in allowed_models:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid model. Allowed: {', '.join(allowed_models)}"
+        )
+    
+    # Store in Firestore settings collection
+    settings_ref = db.collection("system_settings").document("openai")
+    settings_ref.set({
+        "model": req.model,
+        "updated_at": firestore.SERVER_TIMESTAMP,
+    }, merge=True)
+    
+    return {"status": "success", "model": req.model}
+
+
+@router.get("/settings/model")
+def get_openai_model(authorization: str | None = Header(default=None)):
+    """Get the current OpenAI model setting"""
+    require_admin(authorization)
+    
+    settings_ref = db.collection("system_settings").document("openai")
+    settings_doc = settings_ref.get()
+    
+    if settings_doc.exists:
+        data = settings_doc.to_dict()
+        return {"model": data.get("model", "gpt-4o-mini")}
+    
+    return {"model": "gpt-4o-mini"}
+
+
+from google.cloud import firestore
