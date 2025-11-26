@@ -2,6 +2,7 @@ from fastapi import APIRouter, HTTPException, Depends, Query
 from app.utils.auth import verify_token
 from app.services.firestore import db
 from app.services.content_generator import generate_blog_ideas, generate_meta_tags, generate_page_content
+from google.cloud import firestore as gcfirestore
 
 router = APIRouter(prefix="/content", tags=["content"])
 
@@ -30,6 +31,29 @@ async def handle_blog_ideas(
                 "status": "success",
                 "data": doc.to_dict(),
             }
+        
+        # Check user credits before generating new content
+        user_ref = db.collection("users").document(user_id)
+        user_snapshot = user_ref.get()
+        
+        if not user_snapshot.exists:
+            raise HTTPException(status_code=404, detail="User not found")
+        
+        user_data = user_snapshot.to_dict() or {}
+        current_credits = user_data.get("credits", 0)
+        
+        # Check if user has enough credits (1 credit per content generation)
+        if current_credits < 1:
+            raise HTTPException(
+                status_code=402,
+                detail="Insufficient credits. Please contact support to add more credits."
+            )
+        
+        # Deduct 1 credit
+        user_ref.update({
+            "credits": gcfirestore.Increment(-1),
+            "lastActivity": gcfirestore.SERVER_TIMESTAMP,
+        })
         
         # Generate new blog ideas
         doc_id = f"{user_id}_{research_id}"
@@ -94,6 +118,29 @@ async def handle_meta_tags(
                 "data": doc.to_dict(),
             }
         
+        # Check user credits before generating new content
+        user_ref = db.collection("users").document(user_id)
+        user_snapshot = user_ref.get()
+        
+        if not user_snapshot.exists:
+            raise HTTPException(status_code=404, detail="User not found")
+        
+        user_data = user_snapshot.to_dict() or {}
+        current_credits = user_data.get("credits", 0)
+        
+        # Check if user has enough credits (1 credit per content generation)
+        if current_credits < 1:
+            raise HTTPException(
+                status_code=402,
+                detail="Insufficient credits. Please contact support to add more credits."
+            )
+        
+        # Deduct 1 credit
+        user_ref.update({
+            "credits": gcfirestore.Increment(-1),
+            "lastActivity": gcfirestore.SERVER_TIMESTAMP,
+        })
+        
         # Generate new meta tags
         doc_id = f"{user_id}_{research_id}"
         intake_ref = db.collection("research_intakes").document(doc_id)
@@ -156,6 +203,29 @@ async def handle_page_content(
                 "status": "success",
                 "data": doc.to_dict(),
             }
+        
+        # Check user credits before generating new content
+        user_ref = db.collection("users").document(user_id)
+        user_snapshot = user_ref.get()
+        
+        if not user_snapshot.exists:
+            raise HTTPException(status_code=404, detail="User not found")
+        
+        user_data = user_snapshot.to_dict() or {}
+        current_credits = user_data.get("credits", 0)
+        
+        # Check if user has enough credits (1 credit per content generation)
+        if current_credits < 1:
+            raise HTTPException(
+                status_code=402,
+                detail="Insufficient credits. Please contact support to add more credits."
+            )
+        
+        # Deduct 1 credit
+        user_ref.update({
+            "credits": gcfirestore.Increment(-1),
+            "lastActivity": gcfirestore.SERVER_TIMESTAMP,
+        })
         
         # Generate new page content
         doc_id = f"{user_id}_{research_id}"
