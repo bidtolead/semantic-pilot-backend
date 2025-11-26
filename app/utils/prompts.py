@@ -42,7 +42,7 @@ Use UK English for: New Zealand, UK, Australia
 EACH KEYWORD MUST INCLUDE:
 
 • keyword: exact match from raw keyword list  
-• search_volume: must match exactly from the raw data
+• search_volume: copy EXACTLY from "avg_monthly_searches" field in raw data (do not modify, round, or estimate)
 • location: target location from intake data
 • trend_3m: realistic 3-month trend (e.g., "+5%", "Stable", "-3%")
 • trend_yoy: realistic year-over-year trend (e.g., "+10%", "+8%", "Stable")
@@ -60,7 +60,7 @@ EACH KEYWORD MUST INCLUDE:
 HARD RULES
 
 • Use only keywords from the uploaded list  
-• Search volume must exactly match the raw data  
+• Search volume MUST be copied exactly from the "avg_monthly_searches" field - DO NOT modify, round, average, or estimate
 • Exclude all keywords with negative terms or blocked brands  
 • Exclude keywords not matching the funnel stage (mid → no top-of-funnel)  
 • Output must be valid JSON with no markdown or extra text  
