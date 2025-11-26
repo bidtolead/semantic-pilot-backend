@@ -41,13 +41,15 @@ def _update_user_metrics(user_id: str, token_usage: dict, cost: float):
     """Update user token usage and spending."""
     try:
         user_ref = db.collection("users").document(user_id)
+        print(f"💰 Updating user {user_id}: tokens={token_usage['total_tokens']}, cost=${cost:.6f}")
         user_ref.update({
             "tokenUsage": gcfirestore.Increment(token_usage["total_tokens"]),
             "totalSpend": gcfirestore.Increment(cost),
             "lastActivity": gcfirestore.SERVER_TIMESTAMP,
         })
+        print(f"✅ User metrics updated successfully")
     except Exception as e:
-        print(f"Warning: Failed to update user metrics: {e}")
+        print(f"❌ Warning: Failed to update user metrics: {e}")
 
 
 def generate_blog_ideas(
