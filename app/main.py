@@ -35,15 +35,9 @@ app.add_middleware(
     # Allow Vercel preview deployments (including team/user-scoped URLs)
     allow_origin_regex=r"^https://semantic-pilot-frontend.*\.vercel\.app$",
     allow_credentials=True,
-    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-    allow_headers=[
-        "Content-Type",
-        "Authorization",
-        "X-Requested-With",
-        "Accept",
-        "Origin",
-    ],
-    expose_headers=["Content-Type", "Authorization"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+    expose_headers=["*"],
 )
 
 # -------------------------------------------------
