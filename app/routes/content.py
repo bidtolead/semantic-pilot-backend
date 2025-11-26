@@ -6,7 +6,7 @@ from app.services.content_generator import generate_blog_ideas, generate_meta_ta
 router = APIRouter(prefix="/content", tags=["content"])
 
 
-@router.post("/blog-ideas/{user_id}/{research_id}")
+@router.get("/blog-ideas/{user_id}/{research_id}")
 async def create_blog_ideas(
     user_id: str,
     research_id: str,
@@ -55,7 +55,7 @@ async def create_blog_ideas(
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.post("/meta-tags/{user_id}/{research_id}")
+@router.get("/meta-tags/{user_id}/{research_id}")
 async def create_meta_tags(
     user_id: str,
     research_id: str,
