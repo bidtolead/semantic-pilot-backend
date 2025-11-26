@@ -11,6 +11,7 @@ router = APIRouter()
 # ----------------------------------------
 DEFAULT_USER_FIELDS = {
     "email": None,
+    "firstName": None,
     "role": "user",
     "plan": "free",
     "credits": 100,
@@ -83,11 +84,52 @@ def get_current_user(authorization: str | None = Header(default=None)):
         new_user["uid"] = uid
         new_user["createdAt"] = datetime.utcnow().isoformat()
         new_user["lastLoginAt"] = datetime.utcnow().isoformat()
+        
+        # Extract first name from Google displayName if available
+        display_name = decoded.get("name")
+        if display_name and not new_user["firstName"]:
+            new_user["firstName"] = display_name.split()[0] if display_name else None
 
         user_ref.set(new_user)
 
         return new_user
 
+    except Exception as e:
+        raise HTTPException(status_code=401, detail=str(e))
+
+
+# ----------------------------------------
+# UPDATE USER PROFILE
+# ----------------------------------------
+@router.post("/auth/update-profile")
+def update_profile(
+    body: dict,
+    authorization: str | None = Header(default=None)
+):
+    """Update user profile fields like firstName."""
+    
+    if not authorization or not authorization.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Missing or invalid Authorization header")
+
+    token = authorization.split(" ")[1]
+
+    try:
+        decoded = firebase_auth.verify_id_token(token)
+        uid = decoded["uid"]
+        
+        user_ref = db.collection("users").document(uid)
+        
+        # Only allow updating specific fields
+        allowed_fields = ["firstName"]
+        update_data = {k: v for k, v in body.items() if k in allowed_fields}
+        
+        if not update_data:
+            raise HTTPException(status_code=400, detail="No valid fields to update")
+        
+        user_ref.update(update_data)
+        
+        return {"status": "success", "updated": update_data}
+        
     except Exception as e:
         raise HTTPException(status_code=401, detail=str(e))
 
