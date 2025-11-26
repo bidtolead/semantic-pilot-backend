@@ -7,6 +7,7 @@ from google.cloud import firestore as gcfirestore
 from app.utils.blog_ideas_prompt import BLOG_IDEAS_PROMPT
 from app.utils.meta_prompt import META_TAGS_PROMPT
 from app.utils.content_prompt import CONTENT_PROMPT
+from app.utils.cost_calculator import calculate_openai_cost
 
 # Initialize OpenAI client
 client = OpenAI()
@@ -34,6 +35,19 @@ def _get_model_from_settings():
     except Exception:
         pass
     return model
+
+
+def _update_user_metrics(user_id: str, token_usage: dict, cost: float):
+    """Update user token usage and spending."""
+    try:
+        user_ref = db.collection("users").document(user_id)
+        user_ref.update({
+            "tokenUsage": gcfirestore.Increment(token_usage["total_tokens"]),
+            "totalSpend": gcfirestore.Increment(cost),
+            "lastActivity": gcfirestore.SERVER_TIMESTAMP,
+        })
+    except Exception as e:
+        print(f"Warning: Failed to update user metrics: {e}")
 
 
 def generate_blog_ideas(
@@ -80,12 +94,19 @@ def generate_blog_ideas(
     if not response.choices:
         raise RuntimeError("OpenAI returned no choices")
     
-    # Extract token usage
+    # Extract token usage and calculate cost
     token_usage = {
         "prompt_tokens": getattr(response.usage, "prompt_tokens", 0) if response.usage else 0,
         "completion_tokens": getattr(response.usage, "completion_tokens", 0) if response.usage else 0,
         "total_tokens": getattr(response.usage, "total_tokens", 0) if response.usage else 0,
     }
+    
+    cost = calculate_openai_cost(
+        prompt_tokens=token_usage["prompt_tokens"],
+        completion_tokens=token_usage["completion_tokens"],
+        model="gpt-4o-mini"
+    )
+    token_usage["estimated_cost_usd"] = cost
     
     content = response.choices[0].message.content
     try:
@@ -112,15 +133,8 @@ def generate_blog_ideas(
     
     doc_ref.set(firestore_payload)
     
-    # Update user token usage
-    try:
-        user_ref = db.collection("users").document(user_id)
-        user_ref.update({
-            "tokenUsage": gcfirestore.Increment(token_usage["total_tokens"]),
-            "lastActivity": gcfirestore.SERVER_TIMESTAMP,
-        })
-    except Exception as e:
-        print(f"Warning: Failed to update user token usage: {e}")
+    # Update user metrics
+    _update_user_metrics(user_id, token_usage, cost)
     
     # Return payload without SERVER_TIMESTAMP sentinel
     return {
@@ -174,12 +188,19 @@ def generate_meta_tags(
     if not response.choices:
         raise RuntimeError("OpenAI returned no choices")
     
-    # Extract token usage
+    # Extract token usage and calculate cost
     token_usage = {
         "prompt_tokens": getattr(response.usage, "prompt_tokens", 0) if response.usage else 0,
         "completion_tokens": getattr(response.usage, "completion_tokens", 0) if response.usage else 0,
         "total_tokens": getattr(response.usage, "total_tokens", 0) if response.usage else 0,
     }
+    
+    cost = calculate_openai_cost(
+        prompt_tokens=token_usage["prompt_tokens"],
+        completion_tokens=token_usage["completion_tokens"],
+        model="gpt-4o-mini"
+    )
+    token_usage["estimated_cost_usd"] = cost
     
     content = response.choices[0].message.content
     try:
@@ -208,12 +229,8 @@ def generate_meta_tags(
     
     doc_ref.set(firestore_payload)
     
-    # Update user token usage
-    try:
-        user_ref = db.collection("users").document(user_id)
-        user_ref.update({
-            "tokenUsage": gcfirestore.Increment(token_usage["total_tokens"]),
-            "lastActivity": gcfirestore.SERVER_TIMESTAMP,
+    # Update user metrics
+    _update_user_metrics(user_id, token_usage, cost)
         })
     except Exception as e:
         print(f"Warning: Failed to update user token usage: {e}")
@@ -272,12 +289,19 @@ def generate_page_content(
     if not response.choices:
         raise RuntimeError("OpenAI returned no choices")
     
-    # Extract token usage
+    # Extract token usage and calculate cost
     token_usage = {
         "prompt_tokens": getattr(response.usage, "prompt_tokens", 0) if response.usage else 0,
         "completion_tokens": getattr(response.usage, "completion_tokens", 0) if response.usage else 0,
         "total_tokens": getattr(response.usage, "total_tokens", 0) if response.usage else 0,
     }
+    
+    cost = calculate_openai_cost(
+        prompt_tokens=token_usage["prompt_tokens"],
+        completion_tokens=token_usage["completion_tokens"],
+        model="gpt-4o-mini"
+    )
+    token_usage["estimated_cost_usd"] = cost
     
     content = response.choices[0].message.content
     try:
@@ -301,6 +325,15 @@ def generate_page_content(
         "sections": result_json.get("sections", []),
         "faq": result_json.get("faq", []),
         "cta": result_json.get("cta", ""),
+        "token_usage": token_usage,
+        "status": "completed",
+        "createdAt": gcfirestore.SERVER_TIMESTAMP,
+    }
+    
+    doc_ref.set(firestore_payload)
+    
+    # Update user metrics
+    _update_user_metrics(user_id, token_usage, cost)
         "token_usage": token_usage,
         "status": "completed",
         "createdAt": gcfirestore.SERVER_TIMESTAMP,
