@@ -331,24 +331,8 @@ def generate_page_content(
     
     # Update user metrics
     _update_user_metrics(user_id, token_usage, cost)
-        "token_usage": token_usage,
-        "status": "completed",
-        "createdAt": gcfirestore.SERVER_TIMESTAMP,
-    }
     
-    doc_ref.set(firestore_payload)
-    
-    # Update user token usage
-    try:
-        user_ref = db.collection("users").document(user_id)
-        user_ref.update({
-            "tokenUsage": gcfirestore.Increment(token_usage["total_tokens"]),
-            "lastActivity": gcfirestore.SERVER_TIMESTAMP,
-        })
-    except Exception as e:
-        print(f"Warning: Failed to update user token usage: {e}")
-    
-    # Return payload without SERVER_TIMESTAMP sentinel
+    # Return payload without SERVER_TIMESTAMP sentinel    # Return payload without SERVER_TIMESTAMP sentinel
     return {
         "h1": result_json.get("h1", ""),
         "intro": result_json.get("intro", ""),
