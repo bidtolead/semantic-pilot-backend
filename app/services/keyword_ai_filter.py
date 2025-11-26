@@ -3,6 +3,7 @@ import json
 from typing import Any, Dict, List, Optional
 
 from openai import OpenAI
+from datetime import datetime, date
 from app.services.firestore import db
 from google.cloud import firestore as gcfirestore
 
@@ -42,6 +43,30 @@ def _load_prompt_text() -> str:
     )
 
 
+def _json_default(o):
+    """Best-effort JSON serializer for Firestore timestamps and datetimes.
+
+    Converts datetime/date and Google Firestore DatetimeWithNanoseconds to ISO strings.
+    Falls back to str(o) for unknown types to avoid serialization crashes.
+    """
+    # Datetime / date to ISO
+    if isinstance(o, (datetime, date)):
+        try:
+            return o.isoformat()
+        except Exception:
+            return str(o)
+
+    # Objects that implement isoformat (e.g., Firestore DatetimeWithNanoseconds)
+    if hasattr(o, "isoformat"):
+        try:
+            return o.isoformat()
+        except Exception:
+            return str(o)
+
+    # Fallback for anything else
+    return str(o)
+
+
 def run_keyword_ai_filter(
     *,
     intake: Dict[str, Any],
@@ -63,8 +88,14 @@ def run_keyword_ai_filter(
 
     # Build prompt with injected JSON blocks
     prompt = prompt_template
-    prompt = prompt.replace("{intake_json}", json.dumps(intake, ensure_ascii=False, indent=2))
-    prompt = prompt.replace("{keywords_list}", json.dumps(raw_output, ensure_ascii=False, indent=2))
+    prompt = prompt.replace(
+        "{intake_json}",
+        json.dumps(intake, ensure_ascii=False, indent=2, default=_json_default),
+    )
+    prompt = prompt.replace(
+        "{keywords_list}",
+        json.dumps(raw_output, ensure_ascii=False, indent=2, default=_json_default),
+    )
 
     try:
         response = client.chat.completions.create(
