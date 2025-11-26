@@ -304,11 +304,28 @@ async def run_keyword_research(
             detail=f"Failed to save results to Firestore: {str(e)}"
         )
     
-    # 6. Return success response
+    # 6. Step 3: Run AI keyword filtering to produce structured results
+    try:
+        from app.services.keyword_ai_filter import run_keyword_ai_filter
+        structured = run_keyword_ai_filter(
+            intake=intake,
+            raw_output=raw_output,
+            user_id=userId,
+            research_id=intakeId,
+        )
+    except Exception as e:
+        # Do not fail the entire flow if AI post-processing fails; return raw stats with error
+        raise HTTPException(
+            status_code=500,
+            detail=f"AI keyword filtering failed: {str(e)}"
+        )
+
+    # 7. Return success response (final structured results are saved under research/{userId}/{intakeId})
     return {
         "success": True,
         "message": "Keyword research completed successfully",
         "keywords_found": len(raw_output),
         "userId": userId,
-        "intakeId": intakeId
+        "intakeId": intakeId,
+        "structured_saved": True
     }
