@@ -101,14 +101,15 @@ def generate_blog_ideas(
         .document("blog_ideas")
     )
     
-    payload = {
+    # Payload for Firestore (includes SERVER_TIMESTAMP)
+    firestore_payload = {
         "blog_ideas": result_json.get("blog_ideas", []),
         "token_usage": token_usage,
         "status": "completed",
         "createdAt": gcfirestore.SERVER_TIMESTAMP,
     }
     
-    doc_ref.set(payload)
+    doc_ref.set(firestore_payload)
     
     # Update user token usage
     try:
@@ -120,7 +121,12 @@ def generate_blog_ideas(
     except Exception as e:
         print(f"Warning: Failed to update user token usage: {e}")
     
-    return payload
+    # Return payload without SERVER_TIMESTAMP sentinel
+    return {
+        "blog_ideas": result_json.get("blog_ideas", []),
+        "token_usage": token_usage,
+        "status": "completed",
+    }
 
 
 def generate_meta_tags(
@@ -189,7 +195,8 @@ def generate_meta_tags(
         .document("meta_tags")
     )
     
-    payload = {
+    # Payload for Firestore (includes SERVER_TIMESTAMP)
+    firestore_payload = {
         "page_title": result_json.get("page_title", ""),
         "meta_description": result_json.get("meta_description", ""),
         "notes": result_json.get("notes", {}),
@@ -198,7 +205,7 @@ def generate_meta_tags(
         "createdAt": gcfirestore.SERVER_TIMESTAMP,
     }
     
-    doc_ref.set(payload)
+    doc_ref.set(firestore_payload)
     
     # Update user token usage
     try:
@@ -210,4 +217,11 @@ def generate_meta_tags(
     except Exception as e:
         print(f"Warning: Failed to update user token usage: {e}")
     
-    return payload
+    # Return payload without SERVER_TIMESTAMP sentinel
+    return {
+        "page_title": result_json.get("page_title", ""),
+        "meta_description": result_json.get("meta_description", ""),
+        "notes": result_json.get("notes", {}),
+        "token_usage": token_usage,
+        "status": "completed",
+    }
