@@ -4,6 +4,7 @@ from typing import Any, Dict, List, Optional
 
 from openai import OpenAI
 from datetime import datetime, date
+import time
 from app.services.firestore import db
 from google.cloud import firestore as gcfirestore
 
@@ -86,9 +87,9 @@ def run_keyword_ai_filter(
     """
     prompt_template = _load_prompt_text()
 
-    # Limit Google keyword ideas to at most 200 for AI processing
-    # This allows the AI to select from a larger pool while staying within token limits
-    initial_limit = 200
+    # Limit Google keyword ideas to at most 100 for AI processing
+    # Reduces prompt tokens to mitigate TPM rate limits
+    initial_limit = 100
     limited_keywords = raw_output[:initial_limit] if isinstance(raw_output, list) else []
 
     # Build prompt with injected JSON blocks
@@ -141,6 +142,8 @@ def run_keyword_ai_filter(
             raise RuntimeError(f"OpenAI API request failed: {e}")
         # Retry once with smaller keyword batch to reduce tokens
         try:
+            # Basic backoff: wait ~65s to clear TPM window
+            time.sleep(65)
             reduced_limit = 100
             limited_keywords = raw_output[:reduced_limit] if isinstance(raw_output, list) else []
             prompt_retry = prompt_template
