@@ -19,8 +19,9 @@ async def create_blog_ideas(
         raise HTTPException(status_code=403, detail="Not authorized")
     
     try:
-        # Fetch intake data
-        intake_ref = db.collection("intakes").document(user_id).collection(research_id).document("intake")
+        # Fetch intake data from research_intakes collection
+        doc_id = f"{user_id}_{research_id}"
+        intake_ref = db.collection("research_intakes").document(doc_id)
         intake_doc = intake_ref.get()
         
         if not intake_doc.exists:
@@ -67,8 +68,9 @@ async def create_meta_tags(
         raise HTTPException(status_code=403, detail="Not authorized")
     
     try:
-        # Fetch intake data
-        intake_ref = db.collection("intakes").document(user_id).collection(research_id).document("intake")
+        # Fetch intake data from research_intakes collection
+        doc_id = f"{user_id}_{research_id}"
+        intake_ref = db.collection("research_intakes").document(doc_id)
         intake_doc = intake_ref.get()
         
         if not intake_doc.exists:
