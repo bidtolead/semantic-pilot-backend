@@ -300,6 +300,14 @@ async def run_keyword_research(
             seed_keywords=seed_keywords,
             geo_id=int(geo_id)
         )
+        
+        # Log raw Google API response for debugging
+        print(f"📊 Google Ads API returned {len(raw_output)} keywords")
+        if raw_output:
+            print(f"📊 Sample raw data (first 3 keywords):")
+            for i, kw in enumerate(raw_output[:3]):
+                print(f"   {i+1}. {kw.get('keyword')}: avg_monthly_searches={kw.get('avg_monthly_searches')}")
+        
     except Exception as e:
         raise HTTPException(
             status_code=500,
@@ -324,6 +332,8 @@ async def run_keyword_research(
             "geo_id": geo_id,
             "target_location": target_location,
             "seed_keywords_used": seed_keywords,
+            # Store first 10 keywords for easy debugging in Firestore console
+            "raw_sample": raw_output[:10] if isinstance(raw_output, list) else [],
             # Store metadata from intake for reference
             "metadata": {
                 "keyword_intent": intake.get("keyword_intent"),
