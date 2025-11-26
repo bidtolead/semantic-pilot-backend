@@ -42,12 +42,16 @@ Use UK English for: New Zealand, UK, Australia
 EACH KEYWORD MUST INCLUDE:
 
 • keyword: exact match from raw keyword list  
-• search_volume: must match exactly  
+• search_volume: must match exactly from the raw data
+• location: target location from intake data
+• trend_3m: realistic 3-month trend (e.g., "+5%", "Stable", "-3%")
+• trend_yoy: realistic year-over-year trend (e.g., "+10%", "+8%", "Stable")
 • best_use_case:
    - Primary → "Meta Tags (Page Title, Meta Description), Intro Paragraph"
-   - Others → one specific placement like "H2 Subheading", "FAQ Section", etc.
+   - Secondary → "H2 Subheading", "Blog Content", "Service Page", "Informational Page", etc.
+   - Long-tail → "FAQ Section", "How-To Guide", "Local SEO", "Comparison Page", etc.
 • keyword_intent: informational or commercial  
-• selection_rationale: max 30 words  
+• selection_rationale: max 30 words (optional)
 • recommended_density (optional)  
 • synonym_overlap (optional)
 
