@@ -130,3 +130,66 @@ async def handle_meta_tags(
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/page-content/{user_id}/{research_id}")
+async def handle_page_content(
+    user_id: str,
+    research_id: str,
+    token_data: dict = Depends(verify_token),
+    generate: bool = Query(default=True, description="Generate new content if true, otherwise just retrieve"),
+):
+    """Generate or retrieve full page content based on intake and keywords."""
+    
+    # Verify user owns this research
+    if token_data["uid"] != user_id:
+        raise HTTPException(status_code=403, detail="Not authorized")
+    
+    try:
+        # Check if page content already exists
+        doc_ref = db.collection("intakes").document(user_id).collection(research_id).document("page_content")
+        doc = doc_ref.get()
+        
+        # If exists and not forcing regeneration, return existing
+        if doc.exists and not generate:
+            return {
+                "status": "success",
+                "data": doc.to_dict(),
+            }
+        
+        # Generate new page content
+        doc_id = f"{user_id}_{research_id}"
+        intake_ref = db.collection("research_intakes").document(doc_id)
+        intake_doc = intake_ref.get()
+        
+        if not intake_doc.exists:
+            raise HTTPException(status_code=404, detail="Intake not found")
+        
+        intake = intake_doc.to_dict()
+        
+        # Fetch keyword research results
+        keywords_ref = db.collection("intakes").document(user_id).collection(research_id).document("keyword_research")
+        keywords_doc = keywords_ref.get()
+        
+        if not keywords_doc.exists:
+            raise HTTPException(status_code=404, detail="Keywords not found")
+        
+        keywords = keywords_doc.to_dict()
+        
+        # Generate page content
+        result = generate_page_content(
+            intake=intake,
+            keywords=keywords,
+            user_id=user_id,
+            research_id=research_id,
+        )
+        
+        return {
+            "status": "success",
+            "data": result,
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
