@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException, Depends, Query
 from app.utils.auth import verify_token
 from app.services.firestore import db
-from app.services.content_generator import generate_blog_ideas, generate_meta_tags
+from app.services.content_generator import generate_blog_ideas, generate_meta_tags, generate_page_content
 
 router = APIRouter(prefix="/content", tags=["content"])
 
