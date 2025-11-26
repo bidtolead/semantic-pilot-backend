@@ -231,9 +231,6 @@ def generate_meta_tags(
     
     # Update user metrics
     _update_user_metrics(user_id, token_usage, cost)
-        })
-    except Exception as e:
-        print(f"Warning: Failed to update user token usage: {e}")
     
     # Return payload without SERVER_TIMESTAMP sentinel
     return {
