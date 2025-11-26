@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Header, HTTPException
+from fastapi import APIRouter, Header, HTTPException, Depends
 from firebase_admin import auth as firebase_auth
 
 from app.services.firestore import db
@@ -6,17 +6,26 @@ from google.cloud import firestore as gcfirestore
 
 router = APIRouter(prefix="/auth", tags=["Auth"])
 
-@router.get("/me")
-async def get_current_user(authorization: str = Header(None)):
+def verify_token(authorization: str = Header(None)) -> dict:
+    """FastAPI dependency to verify Firebase ID token.
+
+    Returns the decoded token dict on success, or raises 401 on failure.
+    This can be used in any route via `Depends(verify_token)`.
+    """
     if not authorization:
         raise HTTPException(status_code=401, detail="Missing Authorization header")
 
     try:
-        # 1️⃣ Verify Firebase ID token
         token = authorization.replace("Bearer ", "")
         decoded = firebase_auth.verify_id_token(token)
+        return decoded
+    except Exception:
+        raise HTTPException(status_code=401, detail="Invalid or expired token")
 
-        uid = decoded["uid"]
+@router.get("/me")
+async def get_current_user(decoded: dict = Depends(verify_token)):
+    try:
+        uid = decoded.get("uid")
         email = decoded.get("email")
 
         # 2️⃣ Reference user doc in Firestore
@@ -49,5 +58,8 @@ async def get_current_user(authorization: str = Header(None)):
         # 5️⃣ Return profile to frontend
         return profile_data
 
+    except HTTPException:
+        # Bubble up auth errors
+        raise
     except Exception:
-        raise HTTPException(status_code=401, detail="Invalid or expired token")
+        raise HTTPException(status_code=500, detail="Failed to retrieve user profile")
