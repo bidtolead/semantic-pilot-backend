@@ -87,9 +87,9 @@ def run_keyword_ai_filter(
     """
     prompt_template = _load_prompt_text()
 
-    # Limit Google keyword ideas to at most 100 for AI processing
-    # Reduces prompt tokens to mitigate TPM rate limits
-    initial_limit = 100
+    # Limit Google keyword ideas to mitigate TPM rate limits
+    # Start conservatively; we can tune upward later if stable
+    initial_limit = 50
     limited_keywords = raw_output[:initial_limit] if isinstance(raw_output, list) else []
 
     # Build prompt with injected JSON blocks
@@ -115,7 +115,7 @@ def run_keyword_ai_filter(
         # Fallback to default if settings not available
         pass
 
-    # Call OpenAI with basic retry/backoff on rate limit
+    # Call OpenAI once
     def _call_openai(p: str):
         return client.chat.completions.create(
             model=os.getenv("OPENAI_MODEL") or model,
@@ -132,62 +132,41 @@ def run_keyword_ai_filter(
             ],
         )
 
-    try:
-        response = _call_openai(prompt)
-    except Exception as e:
-        # Detect rate limit by message content to avoid import dependency issues
-        msg = str(e).lower()
-        is_rate_limit = "rate limit" in msg or "rate_limit_exceeded" in msg or "429" in msg
-        if not is_rate_limit:
-            raise RuntimeError(f"OpenAI API request failed: {e}")
-        # Retry once with smaller keyword batch to reduce tokens
+    # Simple retry with exponential backoff on rate limits
+    attempts = 0
+    max_attempts = 2  # initial + one retry
+    backoff_seconds = 60
+    response = None
+
+    while attempts < max_attempts:
         try:
-            # Basic backoff: wait ~65s to clear TPM window
-            time.sleep(65)
-            reduced_limit = 100
-            limited_keywords = raw_output[:reduced_limit] if isinstance(raw_output, list) else []
-            prompt_retry = prompt_template
-            prompt_retry = prompt_retry.replace(
-                "{intake_json}",
-                json.dumps(intake, ensure_ascii=False, indent=2, default=_json_default),
+            response = _call_openai(prompt)
+            break
+        except Exception as e:
+            msg = str(e).lower()
+            is_rate_limit = (
+                "rate limit" in msg or "rate_limit_exceeded" in msg or "429" in msg
             )
-            prompt_retry = prompt_retry.replace(
-                "{keywords_list}",
-                json.dumps(limited_keywords, ensure_ascii=False, indent=2, default=_json_default),
-            )
-            response = _call_openai(prompt_retry)
-        except Exception as e2:
-            # If still rate limited, surface a clear message for the frontend
-            raise RuntimeError(
-                "OpenAI rate limit exceeded. Please try again later or switch to a lower-load model in admin settings."
-            )
-        # Retry once with smaller keyword batch to reduce tokens
-        try:
-            reduced_limit = 100
-            limited_keywords = raw_output[:reduced_limit] if isinstance(raw_output, list) else []
-            prompt_retry = prompt_template
-            prompt_retry = prompt_retry.replace(
-                "{intake_json}",
-                json.dumps(intake, ensure_ascii=False, indent=2, default=_json_default),
-            )
-            prompt_retry = prompt_retry.replace(
-                "{keywords_list}",
-                json.dumps(limited_keywords, ensure_ascii=False, indent=2, default=_json_default),
-            )
-            response = _call_openai(prompt_retry)
-        except Exception as e2:
-            msg2 = str(e2).lower()
-            is_rate_limit2 = "rate limit" in msg2 or "rate_limit_exceeded" in msg2 or "429" in msg2
-            if is_rate_limit2:
-                # Surface a clear message for the frontend
+            if not is_rate_limit:
+                raise RuntimeError(f"OpenAI API request failed: {e}")
+            attempts += 1
+            if attempts >= max_attempts:
                 raise RuntimeError(
                     "OpenAI rate limit exceeded. Please try again later or switch to a lower-load model in admin settings."
                 )
-            raise RuntimeError(f"OpenAI API request failed after retry: {e2}")
-        except Exception as e2:
-            raise RuntimeError(f"OpenAI API request failed after retry: {e2}")
-    except Exception as e:
-        raise RuntimeError(f"OpenAI API request failed: {e}")
+            # Backoff and reduce keyword count further before retry
+            time.sleep(backoff_seconds)
+            reduced_limit = 30
+            limited_keywords = raw_output[:reduced_limit] if isinstance(raw_output, list) else []
+            prompt = prompt_template
+            prompt = prompt.replace(
+                "{intake_json}",
+                json.dumps(intake, ensure_ascii=False, indent=2, default=_json_default),
+            )
+            prompt = prompt.replace(
+                "{keywords_list}",
+                json.dumps(limited_keywords, ensure_ascii=False, indent=2, default=_json_default),
+            )
 
     if not response.choices:
         raise RuntimeError("OpenAI returned no choices")
