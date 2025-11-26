@@ -180,20 +180,34 @@ async def run_keyword_research(
     if uid != userId:
         raise HTTPException(status_code=403, detail="Unauthorized access to this intake")
     
-    # Increment research count for user
+    # Check user credits before proceeding
     user_ref = db.collection("users").document(userId)
     user_snapshot = user_ref.get()
+    
     if not user_snapshot.exists:
         user_ref.set({
             "researchCount": 0,
             "tokenUsage": 0,
+            "credits": 50,  # Initial credits for new users
             "createdAt": gcfirestore.SERVER_TIMESTAMP,
             "lastActivity": gcfirestore.SERVER_TIMESTAMP,
             "online": True,
         })
+        user_snapshot = user_ref.get()
     
-    # Atomic increment of research count
+    user_data = user_snapshot.to_dict() or {}
+    current_credits = user_data.get("credits", 0)
+    
+    # Check if user has enough credits (1 credit per research)
+    if current_credits < 1:
+        raise HTTPException(
+            status_code=402,
+            detail="Insufficient credits. Please contact support to add more credits."
+        )
+    
+    # Deduct 1 credit and increment research count atomically
     user_ref.update({
+        "credits": gcfirestore.Increment(-1),
         "researchCount": gcfirestore.Increment(1),
         "lastActivity": gcfirestore.SERVER_TIMESTAMP,
         "online": True,
