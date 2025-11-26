@@ -43,6 +43,7 @@ EACH KEYWORD MUST INCLUDE:
 
 • keyword: exact match from raw keyword list  
 • search_volume: copy EXACTLY from "avg_monthly_searches" field in raw data (do not modify, round, or estimate)
+  Example: if raw data shows {"keyword": "seo course", "avg_monthly_searches": 40}, you MUST output "search_volume": 40
 • location: target location from intake data
 • trend_3m: realistic 3-month trend (e.g., "+5%", "Stable", "-3%")
 • trend_yoy: realistic year-over-year trend (e.g., "+10%", "+8%", "Stable")
@@ -75,7 +76,7 @@ INPUTS
 ---
 
 OUTPUT
-Return ONLY a valid JSON object:
+Return ONLY a valid JSON object with this exact structure:
 
 {
   "metadata": {
@@ -84,8 +85,20 @@ Return ONLY a valid JSON object:
     "intent": "...",
     "region_spelling": "UK English"
   },
-  "primary_keywords": [],
-  "secondary_keywords": [],
-  "long_tail_keywords": []
+  "primary_keywords": [
+    {
+      "keyword": "exact keyword from list",
+      "search_volume": 40,  // MUST match avg_monthly_searches from raw data exactly
+      "location": "Auckland (City - NZ)",
+      "trend_3m": "Stable",
+      "trend_yoy": "+10%",
+      "best_use_case": "Meta Tags (Page Title, Meta Description), Intro Paragraph",
+      "keyword_intent": "commercial"
+    }
+  ],
+  "secondary_keywords": [...],
+  "long_tail_keywords": [...]
 }
+
+CRITICAL: The search_volume field MUST be the exact same number as avg_monthly_searches from the raw keyword data. Do not round, estimate, or modify it in any way.
 """

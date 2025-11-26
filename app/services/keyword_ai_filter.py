@@ -186,6 +186,44 @@ def run_keyword_ai_filter(
         snippet = content[:300]
         raise ValueError(f"Invalid JSON from model: {e}: {snippet}")
 
+    # Validate and correct search_volume values against raw data
+    raw_keyword_map = {
+        item.get("keyword", "").lower(): item.get("avg_monthly_searches", 0)
+        for item in raw_output
+        if isinstance(item, dict)
+    }
+    
+    def validate_and_fix_search_volumes(keywords_list):
+        """Ensure search_volume matches avg_monthly_searches from raw data."""
+        if not isinstance(keywords_list, list):
+            return keywords_list
+        
+        fixed_keywords = []
+        for kw in keywords_list:
+            if not isinstance(kw, dict):
+                fixed_keywords.append(kw)
+                continue
+            
+            keyword_text = kw.get("keyword", "").lower()
+            ai_volume = kw.get("search_volume")
+            actual_volume = raw_keyword_map.get(keyword_text)
+            
+            if actual_volume is not None and ai_volume != actual_volume:
+                print(f"⚠️  AI search_volume mismatch for '{kw.get('keyword')}': AI={ai_volume}, Actual={actual_volume}. Correcting...")
+                kw["search_volume"] = actual_volume
+            
+            fixed_keywords.append(kw)
+        
+        return fixed_keywords
+    
+    # Apply validation to all keyword categories
+    if "primary_keywords" in result_json:
+        result_json["primary_keywords"] = validate_and_fix_search_volumes(result_json["primary_keywords"])
+    if "secondary_keywords" in result_json:
+        result_json["secondary_keywords"] = validate_and_fix_search_volumes(result_json["secondary_keywords"])
+    if "long_tail_keywords" in result_json:
+        result_json["long_tail_keywords"] = validate_and_fix_search_volumes(result_json["long_tail_keywords"])
+
     # Persist to Firestore
     doc_ref = db.collection("research").document(user_id).collection("research").document(research_id)
     payload = {
