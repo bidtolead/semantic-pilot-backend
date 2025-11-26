@@ -127,6 +127,13 @@ def run_keyword_ai_filter(
     if not response.choices:
         raise RuntimeError("OpenAI returned no choices")
 
+    # Extract token usage from response
+    token_usage = {
+        "prompt_tokens": getattr(response.usage, "prompt_tokens", 0) if response.usage else 0,
+        "completion_tokens": getattr(response.usage, "completion_tokens", 0) if response.usage else 0,
+        "total_tokens": getattr(response.usage, "total_tokens", 0) if response.usage else 0,
+    }
+
     content = response.choices[0].message.content
     try:
         result_json = json.loads(content)
@@ -148,11 +155,23 @@ def run_keyword_ai_filter(
             "google_keywords_total": len(raw_output) if isinstance(raw_output, list) else 0,
             "google_keywords_used_for_ai": len(limited_keywords),
         },
+        "token_usage": token_usage,  # Add token usage tracking
         "status": "completed",
         "createdAt": gcfirestore.SERVER_TIMESTAMP,
     }
 
     doc_ref.set(payload)
+
+    # Update user's total token usage in Firestore
+    try:
+        user_ref = db.collection("users").document(user_id)
+        user_ref.update({
+            "tokenUsage": gcfirestore.Increment(token_usage["total_tokens"]),
+            "lastActivity": gcfirestore.SERVER_TIMESTAMP,
+        })
+    except Exception as e:
+        # Non-fatal: log but don't fail the request
+        print(f"Warning: Failed to update user token usage: {e}")
 
     # Mirror structured keywords back into intake path for legacy UI compatibility
     try:
