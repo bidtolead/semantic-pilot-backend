@@ -86,6 +86,9 @@ def run_keyword_ai_filter(
     """
     prompt_template = _load_prompt_text()
 
+    # Limit Google keyword ideas to at most 50 for AI processing
+    limited_keywords = raw_output[:50] if isinstance(raw_output, list) else []
+
     # Build prompt with injected JSON blocks
     prompt = prompt_template
     prompt = prompt.replace(
@@ -94,12 +97,17 @@ def run_keyword_ai_filter(
     )
     prompt = prompt.replace(
         "{keywords_list}",
-        json.dumps(raw_output, ensure_ascii=False, indent=2, default=_json_default),
+        json.dumps(limited_keywords, ensure_ascii=False, indent=2, default=_json_default),
     )
 
     try:
         response = client.chat.completions.create(
-            model=os.getenv("OPENAI_MODEL", "gpt-4o-mini"),
+            # Prefer a faster model; allow quick override via OPENAI_FAST_MODEL
+            model=(
+                os.getenv("OPENAI_FAST_MODEL")
+                or os.getenv("OPENAI_MODEL")
+                or "gpt-4o-mini"
+            ),
             response_format={"type": "json_object"},
             messages=[
                 {
@@ -134,11 +142,37 @@ def run_keyword_ai_filter(
         "long_tail_keywords": result_json.get("long_tail_keywords", []),
         # Carry-over context that may be useful to the frontend
         "seed_keywords_used": intake.get("suggested_search_terms", ""),
-        "metadata": result_json.get("metadata", {}),
+        "metadata": {
+            **result_json.get("metadata", {}),
+            "google_keywords_total": len(raw_output) if isinstance(raw_output, list) else 0,
+            "google_keywords_used_for_ai": len(limited_keywords),
+        },
         "status": "completed",
         "createdAt": gcfirestore.SERVER_TIMESTAMP,
     }
 
     doc_ref.set(payload)
+
+    # Mirror structured keywords back into intake path for legacy UI compatibility
+    try:
+        intake_keywords_ref = (
+            db.collection("intakes")
+            .document(user_id)
+            .collection(research_id)
+            .document("keyword_research")
+        )
+        intake_keywords_ref.set(
+            {
+                "primary_keywords": payload["primary_keywords"],
+                "secondary_keywords": payload["secondary_keywords"],
+                "long_tail_keywords": payload["long_tail_keywords"],
+                "status": payload["status"],
+                "updatedAt": gcfirestore.SERVER_TIMESTAMP,
+            },
+            merge=True,
+        )
+    except Exception:
+        # Best-effort; do not fail the main pipeline if legacy mirroring fails
+        pass
 
     return payload
