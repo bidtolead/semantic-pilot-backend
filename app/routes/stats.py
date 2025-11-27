@@ -118,29 +118,9 @@ async def get_public_stats(force_refresh: bool = Query(False)):
                     "blog_ideas_created": 0,
                     "keywords_analyzed": 0,
                 }
-            }
-            
-            db.collection("system").document("stats").set(initial_stats)
-            print(f"Initialized stats with real data: {initial_stats}")
-            return {
-                "searches_ran": searches_count,
-                "meta_tags_generated": meta_tags_count,
-                "blog_ideas_created": blog_ideas_count,
-                "keywords_analyzed": keywords_analyzed_count,
-            }
-            
-        except Exception as e:
-            print(f"Error during initialization: {e}")
-            # Return zeros if initialization fails
-            return {
-                "searches_ran": 0,
-                "meta_tags_generated": 0,
-                "blog_ideas_created": 0,
-                "keywords_analyzed": 0,
-            }
             
     except Exception as e:
-        print(f"Error fetching stats: {e}")
+        print(f"❌ Error fetching stats: {e}")
         return {
             "searches_ran": 0,
             "meta_tags_generated": 0,
