@@ -209,7 +209,6 @@ def run_keyword_ai_filter(
             actual_volume = raw_keyword_map.get(keyword_text)
             
             if actual_volume is not None and ai_volume != actual_volume:
-                print(f"⚠️  AI search_volume mismatch for '{kw.get('keyword')}': AI={ai_volume}, Actual={actual_volume}. Correcting...")
                 kw["search_volume"] = actual_volume
             
             fixed_keywords.append(kw)
@@ -252,8 +251,7 @@ def run_keyword_ai_filter(
             "lastActivity": gcfirestore.SERVER_TIMESTAMP,
         })
     except Exception as e:
-        # Non-fatal: log but don't fail the request
-        print(f"Warning: Failed to update user token usage: {e}")
+        pass  # Silently fail - metrics are non-critical
 
     # Mirror structured keywords back into intake path for legacy UI compatibility
     try:

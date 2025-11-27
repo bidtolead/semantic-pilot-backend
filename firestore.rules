@@ -26,6 +26,11 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
     
+    // Subcollection: users/{userId}/research/{researchId}
+    match /users/{userId}/research/{researchId} {
+      allow read, write: if isOwner(userId) || isAdmin();
+    }
+    
     // Research intakes - users can only access their own
     match /research_intakes/{intakeId} {
       // intakeId format: {userId}_{researchId}
