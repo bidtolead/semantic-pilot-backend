@@ -66,10 +66,10 @@ async def get_public_stats():
                                 pass
                 
                 initial_stats = {
-                    "searches_ran": max(searches_count, 100),
-                    "meta_tags_generated": max(meta_tags_count, 250),
-                    "blog_ideas_created": max(blog_ideas_count, 500),
-                    "keywords_analyzed": max(keywords_analyzed_count, 1500),
+                    "searches_ran": searches_count if searches_count > 0 else 100,
+                    "meta_tags_generated": meta_tags_count if meta_tags_count > 0 else 250,
+                    "blog_ideas_created": blog_ideas_count if blog_ideas_count > 0 else 500,
+                    "keywords_analyzed": keywords_analyzed_count if keywords_analyzed_count > 0 else 1500,
                 }
                 
                 db.collection("system").document("stats").set(initial_stats)
