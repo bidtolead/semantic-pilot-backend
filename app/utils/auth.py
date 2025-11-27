@@ -22,6 +22,39 @@ def verify_token(authorization: str = Header(None)) -> dict:
     except Exception:
         raise HTTPException(status_code=401, detail="Invalid or expired token")
 
+
+def require_admin(authorization: str = Header(None)) -> dict:
+    """FastAPI dependency to verify Firebase ID token AND enforce admin role.
+    
+    Returns the decoded token dict on success.
+    Raises 401 for invalid token, 403 for non-admin users.
+    Use this for admin-only endpoints.
+    """
+    if not authorization:
+        raise HTTPException(status_code=401, detail="Missing Authorization header")
+    
+    try:
+        token = authorization.replace("Bearer ", "")
+        decoded = firebase_auth.verify_id_token(token)
+        uid = decoded.get("uid")
+        
+        # Check admin role in Firestore
+        user_ref = db.collection("users").document(uid)
+        user_doc = user_ref.get()
+        
+        if not user_doc.exists:
+            raise HTTPException(status_code=403, detail="User not found")
+        
+        user_data = user_doc.to_dict() or {}
+        if user_data.get("role") != "admin":
+            raise HTTPException(status_code=403, detail="Admin access required")
+        
+        return decoded
+    except HTTPException:
+        raise
+    except Exception:
+        raise HTTPException(status_code=401, detail="Invalid or expired token")
+
 @router.get("/me")
 async def get_current_user(decoded: dict = Depends(verify_token)):
     try:

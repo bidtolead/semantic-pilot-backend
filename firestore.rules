@@ -1,0 +1,62 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+    
+    function isAdmin() {
+      return isSignedIn() && 
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+    
+    // Users collection - users can only read/write their own document
+    match /users/{userId} {
+      allow read: if isOwner(userId) || isAdmin();
+      allow create: if isOwner(userId);
+      // Users cannot modify their own role or credits (prevent self-promotion)
+      allow update: if isOwner(userId) && 
+                       (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['role', 'credits']));
+      allow delete: if isAdmin();
+    }
+    
+    // Research intakes - users can only access their own
+    match /research_intakes/{intakeId} {
+      // intakeId format: {userId}_{researchId}
+      allow read: if isSignedIn() && 
+                     (intakeId.matches('^' + request.auth.uid + '_.*') || isAdmin());
+      allow create: if isSignedIn() && 
+                       intakeId.matches('^' + request.auth.uid + '_.*');
+      allow update, delete: if isSignedIn() && 
+                               intakeId.matches('^' + request.auth.uid + '_.*');
+    }
+    
+    // Intakes collection - nested structure for keyword research
+    match /intakes/{userId}/{documents=**} {
+      allow read: if isOwner(userId) || isAdmin();
+      allow write: if isOwner(userId) || isAdmin();
+    }
+    
+    // System settings - admin only
+    match /system_settings/{document=**} {
+      allow read, write: if isAdmin();
+    }
+    
+    // Research results - users can only access their own
+    match /research_results/{userId}/results/{researchId} {
+      allow read: if isOwner(userId) || isAdmin();
+      allow write: if isOwner(userId) || isAdmin();
+    }
+    
+    // Default deny all other collections
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

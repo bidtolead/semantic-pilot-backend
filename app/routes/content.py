@@ -1,23 +1,34 @@
-from fastapi import APIRouter, HTTPException, Depends, Query
+from fastapi import APIRouter, HTTPException, Depends, Query, Request
 from app.utils.auth import verify_token
 from app.services.firestore import db
 from app.services.content_generator import generate_blog_ideas, generate_meta_tags, generate_page_content
 from google.cloud import firestore as gcfirestore
+from slowapi import Limiter
+from slowapi.util import get_remote_address
 
 router = APIRouter(prefix="/content", tags=["content"])
+limiter = Limiter(key_func=get_remote_address)
 
 
 @router.get("/blog-ideas/{user_id}/{research_id}")
+@limiter.limit("20/hour")  # Max 20 content generations per hour per IP
 async def handle_blog_ideas(
+    request: Request,
     user_id: str,
     research_id: str,
     token_data: dict = Depends(verify_token),
     generate: bool = Query(default=True, description="Generate new ideas if true, otherwise just retrieve"),
 ):
-    """Generate or retrieve blog ideas based on intake and keywords."""
+    """Generate or retrieve blog ideas based on intake and keywords. ADMIN ONLY. Rate limited: 20/hour."""
     
-    # Verify user owns this research
-    if token_data["uid"] != user_id:
+    # Verify admin access AND user owns this research
+    uid = token_data["uid"]
+    user_ref = db.collection("users").document(uid)
+    user_doc = user_ref.get()
+    if not user_doc.exists or user_doc.to_dict().get("role") != "admin":
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    if uid != user_id:
         raise HTTPException(status_code=403, detail="Not authorized")
     
     try:

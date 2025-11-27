@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Header, HTTPException
+from fastapi import APIRouter, Header, HTTPException, Request
 from pydantic import BaseModel
 from app.models.seo_models import ResearchRequest
 from firebase_admin import auth as firebase_auth
@@ -6,8 +6,11 @@ from google.cloud import firestore as gcfirestore
 from app.services.google_ads import fetch_keyword_ideas, load_google_ads_client
 from app.services.firestore import db
 from app.services.keyword_planner_builder import build_keyword_planner_request
+from slowapi import Limiter
+from slowapi.util import get_remote_address
 
 router = APIRouter()
+limiter = Limiter(key_func=get_remote_address)
 
 # Helper to authenticate user
 def get_uid(authorization: str | None):
@@ -65,12 +68,16 @@ class KeywordResearchRequest(BaseModel):
 
 
 @router.post("/google-ads/keyword-research")
+@limiter.limit("10/hour")  # Max 10 keyword research requests per hour per IP
 async def keyword_research(
+    request: Request,
     req: KeywordResearchRequest,
     authorization: str | None = Header(default=None)
 ):
     """
     Execute keyword research based on a stored intake form.
+    ADMIN ONLY - Consumes Google Ads API quota.
+    Rate limited: 10 requests/hour per IP.
     
     1. Loads intake from Firestore
     2. Resolves target location to GEO_ID
@@ -78,7 +85,12 @@ async def keyword_research(
     4. Fetches keyword ideas from Google Ads
     5. Saves results to Firestore
     """
+    # Verify admin access
     uid = get_uid(authorization)
+    user_ref = db.collection("users").document(uid)
+    user_doc = user_ref.get()
+    if not user_doc.exists or user_doc.to_dict().get("role") != "admin":
+        raise HTTPException(status_code=403, detail="Admin access required")
     
     # 1. Load intake from Firestore
     intake_ref = db.collection("research_intakes").document(req.intakeId)
