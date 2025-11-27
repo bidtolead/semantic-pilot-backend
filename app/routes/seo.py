@@ -386,7 +386,15 @@ async def run_keyword_research(
             detail=f"AI keyword filtering failed: {str(e)}"
         )
 
-    # 7. Return success response (final structured results are saved under research/{userId}/{intakeId})
+    # 7. Increment public stats counter
+    try:
+        db.collection("system").document("stats").update({
+            "searches_ran": gcfirestore.Increment(1)
+        })
+    except Exception:
+        pass  # Non-critical
+    
+    # 8. Return success response (final structured results are saved under research/{userId}/{intakeId})
     return {
         "success": True,
         "message": "Keyword research completed successfully",

@@ -252,6 +252,15 @@ def run_keyword_ai_filter(
         })
     except Exception as e:
         pass  # Silently fail - metrics are non-critical
+    
+    # Update public stats counter for keywords analyzed
+    try:
+        total_keywords = len(payload["primary_keywords"]) + len(payload["secondary_keywords"]) + len(payload["long_tail_keywords"])
+        db.collection("system").document("stats").update({
+            "keywords_analyzed": gcfirestore.Increment(total_keywords)
+        })
+    except Exception:
+        pass  # Non-critical
 
     # Mirror structured keywords back into intake path for legacy UI compatibility
     try:

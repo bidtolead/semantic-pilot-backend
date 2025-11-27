@@ -136,6 +136,15 @@ def generate_blog_ideas(
     # Update user metrics
     _update_user_metrics(user_id, token_usage, cost)
     
+    # Update public stats counter
+    try:
+        blog_count = len(result_json.get("blog_ideas", []))
+        db.collection("system").document("stats").update({
+            "blog_ideas_created": gcfirestore.Increment(blog_count)
+        })
+    except Exception:
+        pass  # Non-critical
+    
     # Return payload without SERVER_TIMESTAMP sentinel
     return {
         "blog_ideas": result_json.get("blog_ideas", []),
@@ -232,11 +241,19 @@ def generate_meta_tags(
     # Update user metrics
     _update_user_metrics(user_id, token_usage, cost)
     
+    # Update public stats counter
+    try:
+        db.collection("system").document("stats").update({
+            "meta_tags_generated": gcfirestore.Increment(1)
+        })
+    except Exception:
+        pass  # Non-critical
+    
     # Return payload without SERVER_TIMESTAMP sentinel
     return {
-        "page_title": result_json.get("page_title", ""),
-        "meta_description": result_json.get("meta_description", ""),
-        "notes": result_json.get("notes", {}),
+        "page_title": result_json.get("page_title"),
+        "meta_description": result_json.get("meta_description"),
+        "notes": result_json.get("notes"),
         "token_usage": token_usage,
         "status": "completed",
     }
