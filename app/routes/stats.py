@@ -16,85 +16,106 @@ async def get_public_stats():
         
         if stats_doc.exists:
             stats_data = stats_doc.to_dict()
-            return {
-                "searches_ran": stats_data.get("searches_ran", 100),
-                "meta_tags_generated": stats_data.get("meta_tags_generated", 250),
-                "blog_ideas_created": stats_data.get("blog_ideas_created", 500),
-                "keywords_analyzed": stats_data.get("keywords_analyzed", 1500),
-            }
-        else:
-            # Auto-initialize by counting existing data on first request
-            print("Stats document doesn't exist, initializing...")
             
-            try:
-                # Count existing data quickly
-                research_intakes_list = list(db.collection("research_intakes").limit(100).stream())
-                searches_count = len(research_intakes_list)
+            # Check if this looks like fake baseline data - if so, reinitialize
+            if (stats_data.get("searches_ran") == 100 and 
+                stats_data.get("meta_tags_generated") == 250 and
+                stats_data.get("blog_ideas_created") == 500 and
+                stats_data.get("keywords_analyzed") == 1500):
                 
-                meta_tags_count = 0
-                blog_ideas_count = 0
-                keywords_analyzed_count = 0
-                
-                for research_doc in research_intakes_list[:20]:  # Sample first 20 for speed
-                    doc_id = research_doc.id
-                    if "_" in doc_id:
-                        parts = doc_id.split("_", 1)
-                        if len(parts) == 2:
-                            user_id, research_id = parts
+                print("Detected baseline numbers, forcing recount with real data...")
+                # Force reinitialize - delete and recreate
+                db.collection("system").document("stats").delete()
+                # Fall through to initialization logic below
+            else:
+                # Return existing real data
+                return {
+                    "searches_ran": stats_data.get("searches_ran", 0),
+                    "meta_tags_generated": stats_data.get("meta_tags_generated", 0),
+                    "blog_ideas_created": stats_data.get("blog_ideas_created", 0),
+                    "keywords_analyzed": stats_data.get("keywords_analyzed", 0),
+                }
+        
+        # Initialize with real counts
+        print("Counting real data from database...")
+        
+        try:
+            # Count existing data
+            research_intakes_list = list(db.collection("research_intakes").stream())
+            searches_count = len(research_intakes_list)
+            print(f"Found {searches_count} total searches")
+            
+            meta_tags_count = 0
+            blog_ideas_count = 0
+            keywords_analyzed_count = 0
+            
+            for research_doc in research_intakes_list:
+                doc_id = research_doc.id
+                if "_" in doc_id:
+                    parts = doc_id.split("_", 1)
+                    if len(parts) == 2:
+                        user_id, research_id = parts
+                        
+                        try:
+                            meta_doc = db.collection("intakes").document(user_id).collection(research_id).document("meta_tags").get()
+                            if meta_doc.exists:
+                                meta_tags_count += 1
                             
-                            try:
-                                meta_doc = db.collection("intakes").document(user_id).collection(research_id).document("meta_tags").get()
-                                if meta_doc.exists:
-                                    meta_tags_count += 1
-                                
-                                blog_doc = db.collection("intakes").document(user_id).collection(research_id).document("blog_ideas").get()
-                                if blog_doc.exists:
-                                    blog_data = blog_doc.to_dict()
-                                    if blog_data and "blog_ideas" in blog_data:
-                                        blog_ideas_count += len(blog_data["blog_ideas"])
-                                
-                                keywords_doc = db.collection("intakes").document(user_id).collection(research_id).document("keyword_research").get()
-                                if keywords_doc.exists:
-                                    kw_data = keywords_doc.to_dict()
-                                    if kw_data:
-                                        keywords_analyzed_count += (
-                                            len(kw_data.get("primary_keywords", [])) +
-                                            len(kw_data.get("secondary_keywords", [])) +
-                                            len(kw_data.get("long_tail_keywords", []))
-                                        )
-                            except Exception:
-                                pass
-                
-                initial_stats = {
-                    "searches_ran": searches_count if searches_count > 0 else 100,
-                    "meta_tags_generated": meta_tags_count if meta_tags_count > 0 else 250,
-                    "blog_ideas_created": blog_ideas_count if blog_ideas_count > 0 else 500,
-                    "keywords_analyzed": keywords_analyzed_count if keywords_analyzed_count > 0 else 1500,
-                }
-                
-                db.collection("system").document("stats").set(initial_stats)
-                print(f"Initialized stats: {initial_stats}")
-                return initial_stats
-                
-            except Exception as e:
-                print(f"Error during auto-initialization: {e}")
-                # Return starting numbers if auto-init fails
-                initial_stats = {
-                    "searches_ran": 100,
-                    "meta_tags_generated": 250,
-                    "blog_ideas_created": 500,
-                    "keywords_analyzed": 1500,
-                }
-                db.collection("system").document("stats").set(initial_stats)
-                return initial_stats
+                            blog_doc = db.collection("intakes").document(user_id).collection(research_id).document("blog_ideas").get()
+                            if blog_doc.exists:
+                                blog_data = blog_doc.to_dict()
+                                if blog_data and "blog_ideas" in blog_data:
+                                    blog_ideas_count += len(blog_data["blog_ideas"])
+                            
+                            keywords_doc = db.collection("intakes").document(user_id).collection(research_id).document("keyword_research").get()
+                            if keywords_doc.exists:
+                                kw_data = keywords_doc.to_dict()
+                                if kw_data:
+                                    keywords_analyzed_count += (
+                                        len(kw_data.get("primary_keywords", [])) +
+                                        len(kw_data.get("secondary_keywords", [])) +
+                                        len(kw_data.get("long_tail_keywords", []))
+                                    )
+                        except Exception as e:
+                            print(f"Error counting for {research_id}: {e}")
+                            pass
+            
+            print(f"Real counts - Searches: {searches_count}, Meta: {meta_tags_count}, Blogs: {blog_ideas_count}, Keywords: {keywords_analyzed_count}")
+            
+            initial_stats = {
+                "searches_ran": searches_count,
+                "meta_tags_generated": meta_tags_count,
+                "blog_ideas_created": blog_ideas_count,
+                "keywords_analyzed": keywords_analyzed_count,
+                "last_updated": gcfirestore.SERVER_TIMESTAMP,
+            }
+            
+            db.collection("system").document("stats").set(initial_stats)
+            print(f"Initialized stats with real data: {initial_stats}")
+            return {
+                "searches_ran": searches_count,
+                "meta_tags_generated": meta_tags_count,
+                "blog_ideas_created": blog_ideas_count,
+                "keywords_analyzed": keywords_analyzed_count,
+            }
+            
+        except Exception as e:
+            print(f"Error during initialization: {e}")
+            # Return zeros if initialization fails
+            return {
+                "searches_ran": 0,
+                "meta_tags_generated": 0,
+                "blog_ideas_created": 0,
+                "keywords_analyzed": 0,
+            }
             
     except Exception as e:
         print(f"Error fetching stats: {e}")
         return {
-            "searches_ran": 100,
-            "meta_tags_generated": 250,
-            "blog_ideas_created": 500,
-            "keywords_analyzed": 1500,
+            "searches_ran": 0,
+            "meta_tags_generated": 0,
+            "blog_ideas_created": 0,
+            "keywords_analyzed": 0,
         }
 
 
