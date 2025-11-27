@@ -44,6 +44,16 @@ def require_admin(authorization: str | None):
 
 
 # -----------------------------------------------------
+# ✅ Quick admin check (lightweight)
+# -----------------------------------------------------
+@router.get("/ping")
+def admin_ping(authorization: str | None = Header(default=None)):
+    """Return a simple OK if the requester is an admin."""
+    uid = require_admin(authorization)
+    return {"status": "ok", "uid": uid}
+
+
+# -----------------------------------------------------
 # 📌 GET ALL USERS (includes heartbeat → lastActivity)
 # -----------------------------------------------------
 @router.get("/users")

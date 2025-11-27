@@ -31,9 +31,11 @@ app.add_middleware(
     allow_origins=[
         "https://semantic-pilot-frontend.vercel.app",
         "http://localhost:3000",
+        "https://semanticpilot.com",
+        "https://www.semanticpilot.com",
     ],
     # Allow Vercel preview deployments (including team/user-scoped URLs)
-    allow_origin_regex=r"^https://semantic-pilot-frontend.*\.vercel\.app$",
+    allow_origin_regex=r"^https://(semantic-pilot-frontend.*\.vercel\.app|[a-z0-9-]+\.semanticpilot\.com)$",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
