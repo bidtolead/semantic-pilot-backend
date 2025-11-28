@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Header, HTTPException
 from firebase_admin import auth as firebase_auth
 from app.services.firestore import db
-from app.utils.cost_calculator import get_cost_per_1k_tokens
+from app.utils.cost_calculator import get_cost_per_1k_tokens, calculate_openai_cost
 
 router = APIRouter(prefix="/admin", tags=["Admin"])
 
@@ -92,6 +92,25 @@ def get_all_users(authorization: str | None = Header(default=None)):
         data.setdefault("tokenUsage", 0)
         data.setdefault("totalSpend", 0)
         data.setdefault("role", "user")
+        
+        # Recalculate totalSpend if it's 0 but tokenUsage exists
+        if data["totalSpend"] == 0 and data["tokenUsage"] > 0:
+            token_usage = data["tokenUsage"]
+            estimated_prompt_tokens = token_usage // 2
+            estimated_completion_tokens = token_usage - estimated_prompt_tokens
+            
+            estimated_cost = calculate_openai_cost(
+                prompt_tokens=estimated_prompt_tokens,
+                completion_tokens=estimated_completion_tokens,
+                model="gpt-4o-mini"
+            )
+            
+            # Update in Firestore
+            db.collection("users").document(doc.id).update({
+                "totalSpend": estimated_cost
+            })
+            
+            data["totalSpend"] = estimated_cost
 
         # Add Firestore document ID as userId
         data["userId"] = doc.id
@@ -255,6 +274,50 @@ def get_openai_model(authorization: str | None = Header(default=None)):
     return {
         "model": current_model,
         "cost_per_1k_tokens": cost_per_1k
+    }
+
+
+@router.post("/recalculate-spend")
+def recalculate_user_spend(authorization: str | None = Header(default=None)):
+    """Recalculate totalSpend for all users based on existing tokenUsage"""
+    require_admin(authorization)
+    
+    users_ref = db.collection("users").stream()
+    updated_count = 0
+    total_spend_calculated = 0.0
+    
+    for user_doc in users_ref:
+        user_data = user_doc.to_dict() or {}
+        token_usage = user_data.get("tokenUsage", 0)
+        
+        if token_usage > 0:
+            # Assume 50/50 split between prompt and completion tokens
+            # This is an approximation since we don't have the exact split for old data
+            estimated_prompt_tokens = token_usage // 2
+            estimated_completion_tokens = token_usage - estimated_prompt_tokens
+            
+            # Calculate cost using gpt-4o-mini pricing (most common model)
+            estimated_cost = calculate_openai_cost(
+                prompt_tokens=estimated_prompt_tokens,
+                completion_tokens=estimated_completion_tokens,
+                model="gpt-4o-mini"
+            )
+            
+            # Update user's totalSpend
+            db.collection("users").document(user_doc.id).update({
+                "totalSpend": estimated_cost
+            })
+            
+            updated_count += 1
+            total_spend_calculated += estimated_cost
+    
+    return {
+            total_spend_calculated += estimated_cost
+    
+    return {
+        "status": "success",
+        "users_updated": updated_count,
+        "total_spend_calculated": round(total_spend_calculated, 4)
     }
 
 
