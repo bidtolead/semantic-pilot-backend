@@ -17,7 +17,7 @@ DEFAULT_USER_FIELDS = {
     "credits": 100,
     "researchCount": 0,
     "tokenUsage": 0,
-    "totalSpend": 0,
+    "totalSpend": 0.0,
     "createdAt": None,
     "lastLoginAt": None,
     "uid": None,

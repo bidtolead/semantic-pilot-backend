@@ -255,6 +255,14 @@ def run_keyword_ai_filter(
     # Update user's total token usage and spending in Firestore
     try:
         user_ref = db.collection("users").document(user_id)
+        
+        # First, ensure fields exist (set with merge to avoid overwriting)
+        user_ref.set({
+            "tokenUsage": 0,
+            "totalSpend": 0.0
+        }, merge=True)
+        
+        # Now increment
         user_ref.update({
             "tokenUsage": gcfirestore.Increment(token_usage["total_tokens"]),
             "totalSpend": gcfirestore.Increment(cost),
