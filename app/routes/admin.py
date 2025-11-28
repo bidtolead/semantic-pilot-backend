@@ -312,9 +312,6 @@ def recalculate_user_spend(authorization: str | None = Header(default=None)):
             total_spend_calculated += estimated_cost
     
     return {
-            total_spend_calculated += estimated_cost
-    
-    return {
         "status": "success",
         "users_updated": updated_count,
         "total_spend_calculated": round(total_spend_calculated, 4)
