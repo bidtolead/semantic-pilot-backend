@@ -43,6 +43,10 @@ def suggest_geo_targets(q: str = Query(..., min_length=2, max_length=80)):
         if country and country not in ALLOWED_COUNTRY_CODES:
             continue
 
+        # Filter out postal codes
+        if geo.target_type == "POSTAL_CODE":
+            continue
+
         results.append({
             "id": str(geo.id),
             "name": geo.name,
@@ -50,10 +54,20 @@ def suggest_geo_targets(q: str = Query(..., min_length=2, max_length=80)):
             "targetType": geo.target_type,
         })
 
-    priority = {"COUNTRY": 0, "REGION": 1, "METRO": 2, "CITY": 3}
-
-    results.sort(
-        key=lambda x: (priority.get(x["targetType"], 99), x["name"].lower())
-    )
+    # Filter to only show results that contain the search query
+    query_lower = q.lower()
+    results = [r for r in results if query_lower in r["name"].lower()]
+    
+    # Sort by relevance: exact matches first, then starts-with, then contains
+    def sort_key(item):
+        name_lower = item["name"].lower()
+        if name_lower == query_lower:
+            return (0, name_lower)
+        elif name_lower.startswith(query_lower):
+            return (1, name_lower)
+        else:
+            return (2, name_lower)
+    
+    results.sort(key=sort_key)
 
     return {"items": results}
