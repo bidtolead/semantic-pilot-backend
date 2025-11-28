@@ -7,6 +7,7 @@ from datetime import datetime, date
 import time
 from app.services.firestore import db
 from google.cloud import firestore as gcfirestore
+from app.utils.cost_calculator import calculate_openai_cost
 
 # Initialize OpenAI client (OPENAI_API_KEY must be set in env)
 client = OpenAI()
@@ -177,6 +178,14 @@ def run_keyword_ai_filter(
         "completion_tokens": getattr(response.usage, "completion_tokens", 0) if response.usage else 0,
         "total_tokens": getattr(response.usage, "total_tokens", 0) if response.usage else 0,
     }
+    
+    # Calculate cost
+    cost = calculate_openai_cost(
+        prompt_tokens=token_usage["prompt_tokens"],
+        completion_tokens=token_usage["completion_tokens"],
+        model=model
+    )
+    token_usage["estimated_cost_usd"] = cost
 
     content = response.choices[0].message.content
     try:
@@ -243,11 +252,12 @@ def run_keyword_ai_filter(
 
     doc_ref.set(payload)
 
-    # Update user's total token usage in Firestore
+    # Update user's total token usage and spending in Firestore
     try:
         user_ref = db.collection("users").document(user_id)
         user_ref.update({
             "tokenUsage": gcfirestore.Increment(token_usage["total_tokens"]),
+            "totalSpend": gcfirestore.Increment(cost),
             "lastActivity": gcfirestore.SERVER_TIMESTAMP,
         })
     except Exception as e:

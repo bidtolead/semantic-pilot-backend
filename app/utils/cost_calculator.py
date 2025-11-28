@@ -15,6 +15,48 @@ GPT4O_PRICING = {
     "completion": 10.00,  # $10.00 per 1M output tokens
 }
 
+# GPT-4 Turbo pricing (per 1M tokens)
+GPT4_TURBO_PRICING = {
+    "prompt": 10.00,      # $10.00 per 1M input tokens
+    "completion": 30.00,  # $30.00 per 1M output tokens
+}
+
+# GPT-3.5 Turbo pricing (per 1M tokens)
+GPT35_TURBO_PRICING = {
+    "prompt": 0.50,       # $0.50 per 1M input tokens
+    "completion": 1.50,   # $1.50 per 1M output tokens
+}
+
+
+def get_model_pricing(model: str = "gpt-4o-mini") -> dict:
+    """Get pricing for a specific model."""
+    if model == "gpt-4o-mini":
+        return GPT4O_MINI_PRICING
+    elif model == "gpt-4o":
+        return GPT4O_PRICING
+    elif model == "gpt-4-turbo":
+        return GPT4_TURBO_PRICING
+    elif model == "gpt-3.5-turbo":
+        return GPT35_TURBO_PRICING
+    else:
+        return GPT4O_MINI_PRICING
+
+
+def get_cost_per_1k_tokens(model: str = "gpt-4o-mini") -> str:
+    """
+    Get the average cost per 1000 tokens for a model.
+    Assumes a 50/50 split between prompt and completion tokens.
+    
+    Returns:
+        Formatted string like "$0.000375"
+    """
+    pricing = get_model_pricing(model)
+    
+    # Average of prompt and completion (assuming 500 prompt + 500 completion = 1000 total)
+    avg_cost_per_1k = ((pricing["prompt"] + pricing["completion"]) / 2) * (1000 / 1_000_000)
+    
+    return f"${avg_cost_per_1k:.6f}"
+
 
 def calculate_openai_cost(
     prompt_tokens: int,
@@ -33,14 +75,7 @@ def calculate_openai_cost(
         Cost in USD (as float)
     """
     
-    # Select pricing based on model
-    if model == "gpt-4o-mini":
-        pricing = GPT4O_MINI_PRICING
-    elif model == "gpt-4o":
-        pricing = GPT4O_PRICING
-    else:
-        # Default to gpt-4o-mini pricing
-        pricing = GPT4O_MINI_PRICING
+    pricing = get_model_pricing(model)
     
     # Calculate cost (convert from per-million to actual cost)
     prompt_cost = (prompt_tokens / 1_000_000) * pricing["prompt"]

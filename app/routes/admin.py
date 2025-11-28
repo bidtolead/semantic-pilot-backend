@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Header, HTTPException
 from firebase_admin import auth as firebase_auth
 from app.services.firestore import db
+from app.utils.cost_calculator import get_cost_per_1k_tokens
 
 router = APIRouter(prefix="/admin", tags=["Admin"])
 
@@ -237,17 +238,24 @@ def update_openai_model(
 
 @router.get("/settings/model")
 def get_openai_model(authorization: str | None = Header(default=None)):
-    """Get the current OpenAI model setting"""
+    """Get the current OpenAI model setting with cost information"""
     require_admin(authorization)
     
     settings_ref = db.collection("system_settings").document("openai")
     settings_doc = settings_ref.get()
     
+    current_model = "gpt-4o-mini"
     if settings_doc.exists:
         data = settings_doc.to_dict()
-        return {"model": data.get("model", "gpt-4o-mini")}
+        current_model = data.get("model", "gpt-4o-mini")
     
-    return {"model": "gpt-4o-mini"}
+    # Get cost per 1000 tokens for current model
+    cost_per_1k = get_cost_per_1k_tokens(current_model)
+    
+    return {
+        "model": current_model,
+        "cost_per_1k_tokens": cost_per_1k
+    }
 
 
 from google.cloud import firestore
