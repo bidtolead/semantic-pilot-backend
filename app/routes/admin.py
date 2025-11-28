@@ -90,11 +90,11 @@ def get_all_users(authorization: str | None = Header(default=None)):
         data.setdefault("plan", "free")
         data.setdefault("researchCount", 0)
         data.setdefault("tokenUsage", 0)
-        data.setdefault("totalSpend", 0)
+        data.setdefault("totalSpend", 0.0)
         data.setdefault("role", "user")
         
         # Recalculate totalSpend if it's 0 but tokenUsage exists
-        if data["totalSpend"] == 0 and data["tokenUsage"] > 0:
+        if (data["totalSpend"] == 0 or data["totalSpend"] == 0.0) and data["tokenUsage"] > 0:
             token_usage = data["tokenUsage"]
             estimated_prompt_tokens = token_usage // 2
             estimated_completion_tokens = token_usage - estimated_prompt_tokens
