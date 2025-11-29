@@ -1,5 +1,6 @@
 import os
 import requests
+import json
 from typing import List, Optional, Dict, Any
 from urllib.parse import urlparse
 
@@ -27,9 +28,13 @@ class SerperClient:
         if hl:
             payload["hl"] = hl
 
+        print(f"[SERPER DEBUG] Payload sent to Serper: {json.dumps(payload)}")
         resp = requests.post(SERPER_ENDPOINT, json=payload, headers=headers, timeout=20)
         resp.raise_for_status()
-        return resp.json()
+        result = resp.json()
+        organic_count = len(result.get("organic", []))
+        print(f"[SERPER DEBUG] Serper returned {organic_count} organic results (requested num={payload.get('num')})")
+        return result
 
     def find_url_rank(self, q: str, target_url: str, location: Optional[str] = None, gl: Optional[str] = None, hl: Optional[str] = None, top: int = 20) -> Dict[str, Any]:
         # Ask Serper for at least `top` results so we can inspect that many

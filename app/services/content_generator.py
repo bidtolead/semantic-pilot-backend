@@ -79,6 +79,7 @@ def generate_blog_ideas(
     try:
         response = client.chat.completions.create(
             model=model,
+            temperature=0,
             response_format={"type": "json_object"},
             messages=[
                 {
@@ -182,6 +183,7 @@ def generate_meta_tags(
     try:
         response = client.chat.completions.create(
             model=model,
+            temperature=0,
             response_format={"type": "json_object"},
             messages=[
                 {
@@ -288,6 +290,7 @@ def generate_page_content(
     try:
         response = client.chat.completions.create(
             model=model,
+            temperature=0,
             response_format={"type": "json_object"},
             messages=[
                 {
