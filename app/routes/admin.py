@@ -13,7 +13,7 @@ def require_admin(authorization: str | None):
     """
     Extract the Firebase ID token from the Authorization header,
     verify it, look up the user in Firestore, and ensure they
-    have role == "admin".
+    have role == "admin" or "tester".
     """
     if not authorization or not authorization.startswith("Bearer "):
         raise HTTPException(
@@ -35,7 +35,7 @@ def require_admin(authorization: str | None):
 
         user = doc.to_dict() or {}
 
-        if user.get("role") != "admin":
+        if user.get("role") not in ["admin", "tester"]:
             raise HTTPException(status_code=403, detail="Admin access required")
 
         return uid
@@ -49,9 +49,15 @@ def require_admin(authorization: str | None):
 # -----------------------------------------------------
 @router.get("/ping")
 def admin_ping(authorization: str | None = Header(default=None)):
-    """Return a simple OK if the requester is an admin."""
+    """Return a simple OK if the requester is an admin or tester."""
     uid = require_admin(authorization)
-    return {"status": "ok", "uid": uid}
+    
+    # Get user role to return
+    doc = db.collection("users").document(uid).get()
+    user = doc.to_dict() or {}
+    role = user.get("role", "user")
+    
+    return {"status": "ok", "uid": uid, "role": role}
 
 
 # -----------------------------------------------------
