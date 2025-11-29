@@ -31,9 +31,11 @@ def require_admin(authorization: str | None):
         doc = db.collection("users").document(uid).get()
 
         if not doc.exists:
+            print(f"DEBUG: User document not found for UID: {uid}")
             raise HTTPException(status_code=403, detail="User not found in database")
 
         user = doc.to_dict() or {}
+        print(f"DEBUG: User {uid} has role: {user.get('role')}")
 
         if user.get("role") not in ["admin", "tester"]:
             raise HTTPException(status_code=403, detail="Admin access required")
