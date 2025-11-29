@@ -29,7 +29,7 @@ class SerperClient:
         resp.raise_for_status()
         return resp.json()
 
-    def find_domain_rank(self, q: str, domain: str, location: Optional[str] = None, max_results: int = 20) -> Dict[str, Any]:
+    def find_url_rank(self, q: str, target_url: str, location: Optional[str] = None, max_results: int = 20) -> Dict[str, Any]:
         data = self.search(q=q, location=location)
         serp_items: List[Dict[str, Any]] = []
         # Only organic results for ranking
@@ -43,14 +43,15 @@ class SerperClient:
             url = item.get("link") or item.get("url")
             if not url:
                 continue
-            if domain in url:
+            # Match only the exact URL
+            if url.rstrip("/") == target_url.rstrip("/"):
                 rank = idx
                 url_hit = url
                 break
 
         return {
             "query": q,
-            "domain": domain,
+            "target_url": target_url,
             "rank": rank,
             "url": url_hit,
             "totalChecked": min(len(serp_items), max_results),
