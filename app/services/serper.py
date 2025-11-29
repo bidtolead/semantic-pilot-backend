@@ -12,12 +12,13 @@ class SerperClient:
         if not self.api_key:
             raise ValueError("SERPER_API_KEY is not set in environment")
 
-    def search(self, q: str, location: Optional[str] = None, gl: Optional[str] = None, hl: Optional[str] = None) -> Dict[str, Any]:
+    def search(self, q: str, location: Optional[str] = None, gl: Optional[str] = None, hl: Optional[str] = None, num: int = 20) -> Dict[str, Any]:
         headers = {
             "X-API-KEY": self.api_key,
             "Content-Type": "application/json",
         }
-        payload: Dict[str, Any] = {"q": q}
+        # Request enough results to evaluate top N rankings
+        payload: Dict[str, Any] = {"q": q, "num": max(1, min(int(num or 10), 100))}
         if location:
             payload["location"] = location
         if gl:
@@ -29,8 +30,9 @@ class SerperClient:
         resp.raise_for_status()
         return resp.json()
 
-    def find_url_rank(self, q: str, target_url: str, location: Optional[str] = None, max_results: int = 20) -> Dict[str, Any]:
-        data = self.search(q=q, location=location)
+    def find_url_rank(self, q: str, target_url: str, location: Optional[str] = None, gl: Optional[str] = None, hl: Optional[str] = None, top: int = 20) -> Dict[str, Any]:
+        # Ask Serper for at least `top` results so we can inspect that many
+        data = self.search(q=q, location=location, gl=gl, hl=hl, num=top)
         serp_items: List[Dict[str, Any]] = []
         # Only organic results for ranking
         items = data.get("organic")
@@ -39,7 +41,7 @@ class SerperClient:
 
         rank = None
         url_hit = None
-        for idx, item in enumerate(serp_items[:max_results], start=1):
+        for idx, item in enumerate(serp_items[:top], start=1):
             url = item.get("link") or item.get("url")
             if not url:
                 continue
@@ -54,6 +56,6 @@ class SerperClient:
             "target_url": target_url,
             "rank": rank,
             "url": url_hit,
-            "totalChecked": min(len(serp_items), max_results),
-            "top": max_results,
+            "totalChecked": min(len(serp_items), top),
+            "top": top,
         }
