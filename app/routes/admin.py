@@ -40,6 +40,8 @@ def require_admin(authorization: str | None):
 
         return uid
 
+    except HTTPException:
+        raise  # Re-raise HTTP exceptions as-is
     except Exception as e:
         raise HTTPException(status_code=401, detail=str(e))
 
