@@ -14,6 +14,7 @@ from app.routes.admin import router as admin_router
 from app.routes.activity import router as activity_router
 from app.routes.content import router as content_router
 from app.routes.stats import router as stats_router
+from app.routes.rank_checker import router as rank_router
 
 # ⭐ CORRECT Google Ads Location Search Router
 from app.routes.geo import router as geo_router
@@ -72,6 +73,9 @@ app.include_router(content_router)
 
 # Public stats endpoints
 app.include_router(stats_router)
+
+# Rank checker endpoints
+app.include_router(rank_router)
 
 # Heartbeat for tracking user activity
 app.include_router(activity_router)
