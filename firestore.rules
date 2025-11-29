@@ -43,6 +43,14 @@ service cloud.firestore {
     }
     
     // Intakes collection - nested structure for keyword research
+    // Special case: prevent updating rank snapshots once created (immutable history)
+    match /intakes/{userId}/{researchId}/rank_snapshot {
+      allow read: if isOwner(userId) || isAdmin();
+      allow create: if isOwner(userId);
+      allow update: if false; // snapshots are immutable
+      allow delete: if false;
+    }
+
     match /intakes/{userId}/{documents=**} {
       allow read: if isOwner(userId) || isAdmin();
       allow write: if isOwner(userId) || isAdmin();
