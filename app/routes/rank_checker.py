@@ -38,26 +38,51 @@ class BatchRankRequest(BaseModel):
 
 
 def _parse_location(loc: str):
-    """Extract a city name and country code from a display string like
-    'Auckland (City · NZ)'. Returns (location, gl) where gl is a lowercased
-    country code suitable for Serper's 'gl' parameter. If parsing fails,
-    returns (loc, None).
+    """Extract a city and country from a display string like
+    'Auckland (City · NZ)'. Returns tuple (city_name, gl, location_string)
+    where gl is a lowercased country code for Serper and location_string is a
+    human-friendly string that Serper recognizes better, e.g.,
+    'Auckland, Auckland, New Zealand'. If parsing fails, falls back to (loc, None, loc).
     """
     try:
-        name = loc
+        name = loc.strip() if isinstance(loc, str) else ""
         gl = None
-        if "(" in loc and ")" in loc:
+        country_full = None
+
+        if isinstance(loc, str) and ("(" in loc and ")" in loc):
             # e.g., 'Auckland (City · NZ)'
             name = loc.split("(", 1)[0].strip()
             inside = loc.split("(", 1)[1].split(")", 1)[0]
             parts = [p.strip() for p in inside.split("·")]
             if parts:
-                cc = parts[-1].strip()
+                cc = parts[-1].strip().upper()
                 if len(cc) == 2:
                     gl = cc.lower()
-        return name, gl
+                    COUNTRY_MAP = {
+                        "NZ": "New Zealand",
+                        "AU": "Australia",
+                        "US": "United States",
+                        "GB": "United Kingdom",
+                        "CA": "Canada",
+                    }
+                    country_full = COUNTRY_MAP.get(cc)
+
+        # Fallbacks
+        if not name:
+            name = str(loc)
+        if not country_full and gl:
+            # naive fallback: use code as-is
+            country_full = gl.upper()
+
+        # Construct a richer location string to bias Serper better
+        # Format: "City, City, Country"
+        rich_location = name
+        if name and country_full:
+            rich_location = f"{name}, {name}, {country_full}"
+
+        return name, gl, rich_location
     except Exception:
-        return loc, None
+        return loc, None, loc
 
 
 @router.post("/batch")
@@ -69,7 +94,7 @@ def batch_rank(payload: BatchRankRequest):
             raise ValueError("Maximum of 15 final keywords per research")
         client = SerperClient()
         # Normalize location and derive gl from the LocationCombobox format
-        norm_location, gl = _parse_location(payload.location)
+        norm_location, gl, rich_location = _parse_location(payload.location)
         top = int(payload.top or 20)
         top = 20 if top < 1 else min(top, 100)
         results = []
@@ -77,7 +102,7 @@ def batch_rank(payload: BatchRankRequest):
             r = client.find_url_rank(
                 q=kw,
                 target_url=payload.target_url,
-                location=norm_location,
+                location=rich_location or norm_location,
                 gl=gl,
                 hl="en",
                 top=top,
