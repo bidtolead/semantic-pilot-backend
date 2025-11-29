@@ -32,7 +32,7 @@ class BatchRankRequest(BaseModel):
     keywords: list[str]
     target_url: str
     location: str
-    top: int | None = 50  # number of organic results to check (default 50)
+    top: int | None = 30  # number of organic results to check (default 30)
     user_id: str | None = None  # optional: attribute Serper credits to a user
 
 
