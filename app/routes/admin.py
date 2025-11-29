@@ -91,6 +91,7 @@ def get_all_users(authorization: str | None = Header(default=None)):
         data.setdefault("researchCount", 0)
         data.setdefault("tokenUsage", 0)
         data.setdefault("totalSpend", 0.0)
+        data.setdefault("serperCredits", 0)
         data.setdefault("role", "user")
         
         # Recalculate totalSpend if it's 0 but tokenUsage exists
@@ -275,6 +276,21 @@ def get_openai_model(authorization: str | None = Header(default=None)):
         "model": current_model,
         "cost_per_1k_tokens": cost_per_1k
     }
+
+
+# -----------------------------------------------------
+# 📊 Serper usage total (admin metric)
+# -----------------------------------------------------
+@router.get("/serper/usage")
+def get_serper_usage_total(authorization: str | None = Header(default=None)):
+    """Return total Serper credits consumed across all users"""
+    require_admin(authorization)
+    doc = db.collection("system_settings").document("usage").get()
+    total = 0
+    if doc.exists:
+        data = doc.to_dict() or {}
+        total = int(data.get("serperTotalCredits", 0))
+    return {"serperTotalCredits": total}
 
 
 @router.post("/recalculate-spend")

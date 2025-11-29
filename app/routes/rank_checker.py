@@ -2,6 +2,8 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
 from app.services.serper import SerperClient
+from app.services.firestore import db
+from google.cloud import firestore as gcf
 
 
 router = APIRouter(prefix="/rank", tags=["rank"])
@@ -30,7 +32,8 @@ class BatchRankRequest(BaseModel):
     keywords: list[str]
     target_url: str
     location: str
-    top: int | None = 20  # number of organic results to check (default 20)
+    top: int | None = 50  # number of organic results to check (default 50)
+    user_id: str | None = None  # optional: attribute Serper credits to a user
 
 
 
@@ -85,6 +88,25 @@ def batch_rank(payload: BatchRankRequest):
                 "rank": r.get("rank") if r.get("rank") is not None else f"Not in top {top}",
                 "url": r.get("url"),
             })
+
+        # Track Serper credits usage (global and per-user)
+        try:
+            credit_inc = len(payload.keywords)
+            usage_ref = db.collection("system_settings").document("usage")
+            usage_ref.set({
+                "serperTotalCredits": gcf.Increment(credit_inc),
+                "updated_at": gcf.SERVER_TIMESTAMP,
+            }, merge=True)
+
+            if payload.user_id:
+                user_ref = db.collection("users").document(payload.user_id)
+                user_ref.set({
+                    "serperCredits": gcf.Increment(credit_inc),
+                    "lastSerperUseAt": gcf.SERVER_TIMESTAMP,
+                }, merge=True)
+        except Exception:
+            # Don't fail rank API if usage tracking fails
+            pass
         return {"ok": True, "location": norm_location, "gl": gl, "target_url": payload.target_url, "top": top, "results": results}
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
