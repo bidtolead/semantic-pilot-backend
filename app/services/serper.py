@@ -33,6 +33,7 @@ class SerperClient:
 
     def find_url_rank(self, q: str, target_url: str, location: Optional[str] = None, gl: Optional[str] = None, hl: Optional[str] = None, top: int = 20) -> Dict[str, Any]:
         # Ask Serper for at least `top` results so we can inspect that many
+        print(f"[SERPER DEBUG] Requesting num={top} results from Serper")
         data = self.search(q=q, location=location, gl=gl, hl=hl, num=top)
         serp_items: List[Dict[str, Any]] = []
         # Only organic results for ranking
