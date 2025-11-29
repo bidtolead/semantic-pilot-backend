@@ -39,6 +39,14 @@ class SerperClient:
         items = data.get("organic")
         if isinstance(items, list):
             serp_items.extend(items)
+        
+        # DEBUG: Log what Serper returned
+        print(f"[SERPER DEBUG] Query: {q}, Location: {location}, GL: {gl}")
+        print(f"[SERPER DEBUG] Target: {target_url}")
+        print(f"[SERPER DEBUG] Received {len(serp_items)} organic results")
+        for idx, item in enumerate(serp_items[:10], start=1):
+            url = item.get("link") or item.get("url")
+            print(f"[SERPER DEBUG] #{idx}: {url}")
 
         def _normalize(u: str) -> Dict[str, str]:
             try:
@@ -65,6 +73,7 @@ class SerperClient:
                 return {"host": host, "path": path}
 
         target_norm = _normalize(target_url)
+        print(f"[SERPER DEBUG] Target normalized: host={target_norm['host']}, path={target_norm['path']}")
 
         rank = None
         url_hit = None
@@ -78,11 +87,13 @@ class SerperClient:
             cand = _normalize(url)
             # Exact page match: same host and path
             if cand["host"] == target_norm["host"] and cand["path"] == target_norm["path"]:
+                print(f"[SERPER DEBUG] EXACT MATCH at #{idx}: {url}")
                 rank = idx
                 url_hit = url
                 break
             # Domain fallback: remember first occurrence of same host
             if domain_rank is None and cand["host"] == target_norm["host"]:
+                print(f"[SERPER DEBUG] DOMAIN MATCH at #{idx}: {url}")
                 domain_rank = idx
                 domain_url = url
 
