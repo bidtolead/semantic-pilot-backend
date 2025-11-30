@@ -54,6 +54,27 @@ async def mark_notification_read(notification_id: str, user: dict = Depends(get_
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to mark as read: {str(e)}")
 
+@router.delete("/{notification_id}")
+async def delete_notification(notification_id: str, user: dict = Depends(get_current_user)):
+    """Delete a specific notification owned by the current user"""
+    try:
+        doc_ref = db.collection("notifications").document(notification_id)
+        doc = doc_ref.get()
+
+        if not doc.exists:
+            raise HTTPException(status_code=404, detail="Notification not found")
+
+        data = doc.to_dict()
+        if data.get("userId") != user["uid"]:
+            raise HTTPException(status_code=403, detail="Not authorized")
+
+        doc_ref.delete()
+        return {"success": True}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to delete notification: {str(e)}")
+
 @router.post("/read-all")
 async def mark_all_read(user: dict = Depends(get_current_user)):
     """Mark all notifications as read for the current user"""
