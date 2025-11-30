@@ -17,6 +17,7 @@ from app.routes.stats import router as stats_router
 from app.routes.rank_checker import router as rank_router
 from app.routes.payments import router as payments_router
 from app.routes.reviews import router as reviews_router
+from app.routes.email import router as email_router
 
 # ⭐ CORRECT Google Ads Location Search Router
 from app.routes.geo import router as geo_router
@@ -75,6 +76,7 @@ app.include_router(stats_router)
 app.include_router(rank_router)
 app.include_router(payments_router)
 app.include_router(reviews_router)
+app.include_router(email_router)
 
 # Heartbeat for tracking user activity
 app.include_router(activity_router)
