@@ -44,14 +44,9 @@ app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 # -------------------------------------------------
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "https://semantic-pilot-frontend.vercel.app",
-        "http://localhost:3000",
-        "https://semanticpilot.com",
-        "https://www.semanticpilot.com",
-    ],
-    # Allow Vercel preview deployments (including team/user-scoped URLs)
-    allow_origin_regex=r"^https://(semantic-pilot-frontend.*\.vercel\.app|[a-z0-9-]+\.semanticpilot\.com)$",
+    # Temporarily allow all origins to unblock admin fetches; tighten later
+    allow_origins=["*"],
+    allow_origin_regex=r".*",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
