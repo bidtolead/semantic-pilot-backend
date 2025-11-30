@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Header, HTTPException, Depends
+from fastapi import APIRouter, Header, HTTPException, Depends, Request
 from firebase_admin import auth as firebase_auth
 
 from app.services.firestore import db
@@ -95,10 +95,22 @@ def admin_required(decoded: dict = Depends(verify_token)) -> dict:
         raise HTTPException(status_code=403, detail="Admin verification failed")
 
 @router.get("/me")
-async def get_me_route(decoded: dict = Depends(verify_token)):
+async def get_me_route(decoded: dict = Depends(verify_token), request: Request = None):
     try:
         uid = decoded.get("uid")
         email = decoded.get("email")
+
+        # 1️⃣ Derive country from headers if available
+        country_code = None
+        country_name = None
+        try:
+            if request:
+                # Prefer Cloudflare header if present
+                cc = request.headers.get("CF-IPCountry") or request.headers.get("X-AppEngine-Country")
+                if cc and isinstance(cc, str) and len(cc) in (2, 3):
+                    country_code = cc.upper()
+        except Exception:
+            pass
 
         # 2️⃣ Reference user doc in Firestore
         user_ref = db.collection("users").document(uid)
@@ -114,18 +126,25 @@ async def get_me_route(decoded: dict = Depends(verify_token)):
                 "createdAt": gcfirestore.SERVER_TIMESTAMP,
                 "lastLoginAt": gcfirestore.SERVER_TIMESTAMP,
             }
+            if country_code:
+                profile_data["countryCode"] = country_code
+                profile_data["lastSeenCountryAt"] = gcfirestore.SERVER_TIMESTAMP
             user_ref.set(profile_data)
         else:
             # 4️⃣ Update existing doc with latest email + last login
             profile_data = doc.to_dict() or {}
-            user_ref.update(
-                {
-                    "email": email,
-                    "lastLoginAt": gcfirestore.SERVER_TIMESTAMP,
-                }
-            )
+            update_fields = {
+                "email": email,
+                "lastLoginAt": gcfirestore.SERVER_TIMESTAMP,
+            }
+            if country_code:
+                update_fields["countryCode"] = country_code
+                update_fields["lastSeenCountryAt"] = gcfirestore.SERVER_TIMESTAMP
+            user_ref.update(update_fields)
             # keep local copy roughly in sync
             profile_data["email"] = email
+            if country_code:
+                profile_data["countryCode"] = country_code
 
         # 5️⃣ Return profile to frontend
         return profile_data
