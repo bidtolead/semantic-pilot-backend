@@ -70,13 +70,15 @@ def list_pending_reviews(authorization: str | None = Header(default=None)):
     user = db.collection("users").document(uid).get().to_dict() or {}
     if user.get("role") not in ["admin", "tester"]:
         raise HTTPException(status_code=403, detail="Admin access required")
-    qry = db.collection("reviews").where("approved", "==", False).order_by("createdAt", direction="DESCENDING").limit(50)
+    # Avoid composite index requirement by sorting in Python
+    qry = db.collection("reviews").where("approved", "==", False).limit(50)
     docs = qry.stream()
     items = []
     for d in docs:
         r = d.to_dict() or {}
         r["id"] = d.id
         items.append(r)
+    items.sort(key=lambda x: x.get("createdAt", ""), reverse=True)
     return {"items": items}
 
 
@@ -97,11 +99,16 @@ def approve_review(review_id: str, authorization: str | None = Header(default=No
 @router.get("/approved")
 def list_approved_reviews():
     """Public list of approved reviews for homepage."""
-    qry = db.collection("reviews").where("approved", "==", True).order_by("createdAt", direction="DESCENDING").limit(12)
+    # Avoid composite index requirement by sorting in Python
+    qry = db.collection("reviews").where("approved", "==", True).limit(50)
     docs = qry.stream()
-    items = []
+    rows = []
     for d in docs:
         r = d.to_dict() or {}
+        rows.append(r)
+    rows.sort(key=lambda x: x.get("createdAt", ""), reverse=True)
+    items = []
+    for r in rows[:12]:
         items.append({
             "firstName": r.get("firstName") or "User",
             "rating": r.get("rating") or 5,
