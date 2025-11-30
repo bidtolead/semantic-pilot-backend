@@ -96,6 +96,20 @@ def approve_review(review_id: str, authorization: str | None = Header(default=No
     return {"status": "approved"}
 
 
+@router.delete("/{review_id}")
+def delete_review(review_id: str, authorization: str | None = Header(default=None)):
+    """Admin-only: delete a review (pending or approved)."""
+    uid, _ = _auth(authorization)
+    user = db.collection("users").document(uid).get().to_dict() or {}
+    if user.get("role") not in ["admin", "tester"]:
+        raise HTTPException(status_code=403, detail="Admin access required")
+    ref = db.collection("reviews").document(review_id)
+    if not ref.get().exists:
+        raise HTTPException(status_code=404, detail="Review not found")
+    ref.delete()
+    return {"status": "deleted"}
+
+
 @router.get("/approved")
 def list_approved_reviews():
     """Public list of approved reviews for homepage."""
