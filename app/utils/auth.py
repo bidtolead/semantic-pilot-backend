@@ -55,8 +55,47 @@ def require_admin(authorization: str = Header(None)) -> dict:
     except Exception:
         raise HTTPException(status_code=401, detail="Invalid or expired token")
 
+def get_current_user(decoded: dict = Depends(verify_token)) -> dict:
+    """Dependency to get current user data from Firestore based on token."""
+    try:
+        uid = decoded.get("uid")
+        user_ref = db.collection("users").document(uid)
+        doc = user_ref.get()
+        
+        if not doc.exists:
+            raise HTTPException(status_code=404, detail="User not found")
+        
+        user_data = doc.to_dict() or {}
+        user_data["uid"] = uid
+        return user_data
+    except HTTPException:
+        raise
+    except Exception:
+        raise HTTPException(status_code=500, detail="Failed to get user data")
+
+def admin_required(decoded: dict = Depends(verify_token)) -> dict:
+    """Dependency to enforce admin role. Returns user data."""
+    try:
+        uid = decoded.get("uid")
+        user_ref = db.collection("users").document(uid)
+        doc = user_ref.get()
+        
+        if not doc.exists:
+            raise HTTPException(status_code=403, detail="User not found")
+        
+        user_data = doc.to_dict() or {}
+        if user_data.get("role") != "admin":
+            raise HTTPException(status_code=403, detail="Admin access required")
+        
+        user_data["uid"] = uid
+        return user_data
+    except HTTPException:
+        raise
+    except Exception:
+        raise HTTPException(status_code=403, detail="Admin verification failed")
+
 @router.get("/me")
-async def get_current_user(decoded: dict = Depends(verify_token)):
+async def get_me_route(decoded: dict = Depends(verify_token)):
     try:
         uid = decoded.get("uid")
         email = decoded.get("email")
