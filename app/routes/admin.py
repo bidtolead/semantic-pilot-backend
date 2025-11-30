@@ -31,14 +31,40 @@ def require_admin(authorization: str | None):
         doc = db.collection("users").document(uid).get()
 
         if not doc.exists:
-            print(f"DEBUG: User document not found for UID: {uid}")
-            raise HTTPException(status_code=403, detail="User not found in database")
+            # Auto-create user with default role
+            from datetime import datetime
+            email = decoded.get("email")
+            display_name = decoded.get("name")
+            
+            new_user = {
+                "email": email,
+                "firstName": display_name.split()[0] if display_name else None,
+                "role": "user",  # Default to user; admin must manually upgrade
+                "plan": "free",
+                "credits": 100,
+                "researchCount": 0,
+                "tokenUsage": 0,
+                "totalSpend": 0.0,
+                "createdAt": datetime.utcnow().isoformat(),
+                "lastLoginAt": datetime.utcnow().isoformat(),
+                "uid": uid,
+            }
+            
+            db.collection("users").document(uid).set(new_user)
+            
+            # New users don't have admin/tester role yet
+            raise HTTPException(
+                status_code=403, 
+                detail="Account created. Please contact admin to grant access."
+            )
 
         user = doc.to_dict() or {}
-        print(f"DEBUG: User {uid} has role: {user.get('role')}")
 
         if user.get("role") not in ["admin", "tester"]:
-            raise HTTPException(status_code=403, detail="Admin access required")
+            raise HTTPException(
+                status_code=403, 
+                detail="Access restricted. Only admin and tester roles are allowed."
+            )
 
         return uid
 
