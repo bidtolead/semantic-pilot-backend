@@ -129,3 +129,22 @@ def list_approved_reviews():
             "text": r.get("text") or "",
         })
     return {"items": items}
+
+
+@router.get("/approved/all")
+def list_all_approved_reviews(authorization: str | None = Header(default=None)):
+    """Admin-only: list all approved reviews with full details including IDs for management."""
+    uid, _ = _auth(authorization)
+    user = db.collection("users").document(uid).get().to_dict() or {}
+    if user.get("role") not in ["admin", "tester"]:
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    qry = db.collection("reviews").where("approved", "==", True).limit(50)
+    docs = qry.stream()
+    items = []
+    for d in docs:
+        r = d.to_dict() or {}
+        r["id"] = d.id
+        items.append(r)
+    items.sort(key=lambda x: x.get("createdAt", ""), reverse=True)
+    return {"items": items}
