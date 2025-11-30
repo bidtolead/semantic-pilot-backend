@@ -135,6 +135,66 @@ def update_profile(
 
 
 # ----------------------------------------
+# UPGRADE PLAN (free -> pro)
+# ----------------------------------------
+@router.post("/auth/upgrade-plan")
+def upgrade_plan(
+    body: dict | None = None,
+    authorization: str | None = Header(default=None)
+):
+    """Upgrade a user from free to pro plan.
+    Adds additional credits when upgrading.
+    """
+
+    if not authorization or not authorization.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Missing or invalid Authorization header")
+
+    token = authorization.split(" ")[1]
+
+    try:
+        decoded = firebase_auth.verify_id_token(token)
+        uid = decoded["uid"]
+
+        user_ref = db.collection("users").document(uid)
+        snapshot = user_ref.get()
+        if not snapshot.exists:
+            raise HTTPException(status_code=404, detail="User not found")
+
+        user = snapshot.to_dict() or {}
+        current_plan = user.get("plan", "free")
+        requested_plan = (body or {}).get("plan", "pro")
+
+        allowed_plans = ["free", "pro"]
+        if requested_plan not in allowed_plans:
+            raise HTTPException(status_code=400, detail="Invalid plan requested")
+
+        if current_plan == requested_plan:
+            return {"status": "no-change", "plan": current_plan}
+
+        # Only allow upgrading from free -> pro for now
+        if current_plan != "free" or requested_plan != "pro":
+            raise HTTPException(status_code=400, detail="Unsupported plan transition")
+
+        # Perform upgrade
+        # Provide bonus credits if not already pro
+        bonus_credits = 1000
+        new_credits = (user.get("credits", 0) or 0) + bonus_credits
+
+        user_ref.update({
+            "plan": "pro",
+            "credits": new_credits,
+            "lastLoginAt": datetime.utcnow().isoformat(),
+        })
+
+        return {"status": "upgraded", "plan": "pro", "credits": new_credits}
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=401, detail=str(e))
+
+
+# ----------------------------------------
 # (Removed obsolete placeholder /login endpoint; Firebase handles auth client-side.)
 
 
