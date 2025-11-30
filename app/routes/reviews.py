@@ -43,6 +43,12 @@ def submit_review(body: dict, authorization: str | None = Header(default=None)):
     if research_count < 10 and token_usage < 10:
         raise HTTPException(status_code=403, detail="Review available after using at least 10 credits")
 
+    # Enforce single review per user (pending or approved)
+    existing_qry = db.collection("reviews").where("uid", "==", uid).limit(1)
+    existing = list(existing_qry.stream())
+    if existing:
+        raise HTTPException(status_code=409, detail="You have already submitted a review")
+
     review = {
         "uid": uid,
         "email": user.get("email"),
