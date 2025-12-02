@@ -126,22 +126,23 @@ def get_all_users(authorization: str | None = Header(default=None)):
         data.setdefault("plan", "free")
         data.setdefault("researchCount", 0)
         data.setdefault("tokenUsage", 0)
+        data.setdefault("promptTokens", 0)
+        data.setdefault("completionTokens", 0)
+        data.setdefault("model", "gpt-4o-mini")
         data.setdefault("totalSpend", 0.0)
         data.setdefault("serperCredits", 0)
         data.setdefault("role", "user")
         
-        # Always recalculate totalSpend if tokenUsage exists
-        if data["tokenUsage"] > 0:
-            token_usage = data["tokenUsage"]
-            estimated_prompt_tokens = token_usage // 2
-            estimated_completion_tokens = token_usage - estimated_prompt_tokens
-
+        # Always recalculate totalSpend if tokens exist
+        if data["promptTokens"] > 0 or data["completionTokens"] > 0:
+            model_name = data.get("model", "gpt-4o-mini")
+            prompt_tokens = data.get("promptTokens", 0)
+            completion_tokens = data.get("completionTokens", 0)
             estimated_cost = calculate_openai_cost(
-                prompt_tokens=estimated_prompt_tokens,
-                completion_tokens=estimated_completion_tokens,
-                model="gpt-4o-mini"
+                prompt_tokens=prompt_tokens,
+                completion_tokens=completion_tokens,
+                model=model_name
             )
-
             # Update in Firestore only if changed
             if data.get("totalSpend", 0) != estimated_cost:
                 db.collection("users").document(doc.id).update({
