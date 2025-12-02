@@ -23,7 +23,14 @@ def check_review_status(authorization: str | None = Header(default=None)):
     uid, _ = _auth(authorization)
     existing_qry = db.collection("reviews").where("uid", "==", uid).limit(1)
     existing = list(existing_qry.stream())
-    return {"hasSubmitted": len(existing) > 0}
+    if len(existing) > 0:
+        review_data = existing[0].to_dict() or {}
+        return {
+            "hasSubmitted": True,
+            "approved": review_data.get("approved", False),
+            "rejected": review_data.get("rejected", False)
+        }
+    return {"hasSubmitted": False, "approved": False, "rejected": False}
 
 
 @router.post("")
