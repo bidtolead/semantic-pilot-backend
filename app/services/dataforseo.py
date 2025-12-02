@@ -49,8 +49,8 @@ def fetch_keyword_ideas(
     seed_keywords: List[str],
     location_name: str,
     language_name: str = "English",
-    poll_timeout_sec: int = 60,
-    poll_interval_sec: float = 2.0,
+    poll_timeout_sec: int = 180,
+    poll_interval_sec: float = 3.0,
 ) -> List[Dict]:
     """Fetch keyword ideas via DataForSEO Keywords for Keywords.
 
