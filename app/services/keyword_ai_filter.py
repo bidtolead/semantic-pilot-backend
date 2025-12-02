@@ -235,6 +235,17 @@ def run_keyword_ai_filter(
                 kw["competition_index"] = raw_data.get("competition_index")
                 kw["low_top_of_page_bid_micros"] = raw_data.get("low_top_of_page_bid_micros")
                 kw["high_top_of_page_bid_micros"] = raw_data.get("high_top_of_page_bid_micros")
+                
+                # Add YoY trend data
+                yoy = raw_data.get("yoy_change")
+                if yoy is not None:
+                    # Format as "+X%" or "-X%"
+                    kw["trend_yoy"] = f"{'+' if yoy > 0 else ''}{yoy}%"
+                else:
+                    kw["trend_yoy"] = "N/A"
+                
+                # Add monthly searches data for potential future use
+                kw["monthly_searches"] = raw_data.get("monthly_searches", [])
             
             fixed_keywords.append(kw)
         
