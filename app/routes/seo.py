@@ -3,7 +3,8 @@ from pydantic import BaseModel
 from app.models.seo_models import ResearchRequest
 from firebase_admin import auth as firebase_auth
 from google.cloud import firestore as gcfirestore
-from app.services.google_ads import fetch_keyword_ideas, load_google_ads_client
+from app.services.google_ads import load_google_ads_client
+from app.services.dataforseo import fetch_keyword_ideas as dfs_fetch_keyword_ideas
 from app.services.firestore import db
 from app.services.keyword_planner_builder import build_keyword_planner_request
 from slowapi import Limiter
@@ -49,9 +50,10 @@ async def run_research(
     })
 
     # RUN YOUR KEYWORD RESEARCH
-    raw_keywords = fetch_keyword_ideas(
+    # Switch to DataForSEO for keyword collection
+    raw_keywords = dfs_fetch_keyword_ideas(
         seed_keywords=req.suggested_keywords,
-        geo_id=req.location_id,
+        location_name=req.location,
     )
 
     return {
@@ -107,50 +109,22 @@ async def keyword_research(
         raise HTTPException(status_code=400, detail="target_location is required in intake")
     
     # Call geo suggest service to find matching GEO_ID
-    try:
-        client, _ = load_google_ads_client()
-        service = client.get_service("GeoTargetConstantService")
-        request = client.get_type("SuggestGeoTargetConstantsRequest")
-        request.locale = "en"
-        request.location_names.names.append(target_location)
-        
-        response = service.suggest_geo_target_constants(request=request)
-        
-        # Find first enabled geo target
-        geo_id = None
-        for suggestion in response.geo_target_constant_suggestions:
-            geo = suggestion.geo_target_constant
-            if geo.status.name == "ENABLED":
-                geo_id = str(geo.id)
-                break
-        
-        if not geo_id:
-            raise HTTPException(
-                status_code=400,
-                detail=f"No matching geo target found for location: {target_location}"
-            )
-    
-    except Exception as e:
-        raise HTTPException(
-            status_code=500,
-            detail=f"Failed to resolve location '{target_location}': {str(e)}"
-        )
+    # DataForSEO uses location_name directly, skip Google Ads geo resolution
+    geo_id = None
     
     # 3. Build Keyword Planner request using helper function
     kp_payload = build_keyword_planner_request(intake, geo_id)
     
     # 4. Fetch keyword ideas from Google Ads
     try:
-        raw_keyword_data = fetch_keyword_ideas(
+        raw_keyword_data = dfs_fetch_keyword_ideas(
             seed_keywords=kp_payload["seed_keywords"],
-            geo_id=int(kp_payload["geo_id"]),
-            landing_page=kp_payload["landing_page"],
-            competitor_urls=kp_payload["competitor_urls"]
+            location_name=target_location,
         )
     except Exception as e:
         raise HTTPException(
             status_code=500,
-            detail=f"Google Ads keyword research failed: {str(e)}"
+            detail=f"DataForSEO keyword research failed: {str(e)}"
         )
     
     # 5. Save results to Firestore
@@ -254,35 +228,7 @@ async def run_keyword_research(
     
     # Call geo suggest service to find matching GEO_ID
     geo_id = None
-    try:
-        client, _ = load_google_ads_client()
-        service = client.get_service("GeoTargetConstantService")
-        geo_request = client.get_type("SuggestGeoTargetConstantsRequest")
-        geo_request.locale = "en"
-        geo_request.location_names.names.append(target_location)
-        
-        response = service.suggest_geo_target_constants(request=geo_request)
-        
-        # Find first enabled geo target
-        for suggestion in response.geo_target_constant_suggestions:
-            geo = suggestion.geo_target_constant
-            if geo.status.name == "ENABLED":
-                geo_id = str(geo.id)
-                break
-        
-        if not geo_id:
-            raise HTTPException(
-                status_code=400,
-                detail=f"No matching geo target found for location: {target_location}"
-            )
-    
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(
-            status_code=500,
-            detail=f"Failed to resolve location '{target_location}': {str(e)}"
-        )
+    # DataForSEO flow: no geo_id required, use location_name directly
     
     # 3. Prepare seed keywords from intake
     # Combine relevant fields into seed keywords
@@ -308,14 +254,14 @@ async def run_keyword_research(
     
     # 4. Call fetch_keyword_ideas() from google_ads.py
     try:
-        raw_output = fetch_keyword_ideas(
+        raw_output = dfs_fetch_keyword_ideas(
             seed_keywords=seed_keywords,
-            geo_id=int(geo_id)
+            location_name=target_location,
         )
     except Exception as e:
         raise HTTPException(
             status_code=500,
-            detail=f"Google Keyword Planner API failed: {str(e)}"
+            detail=f"DataForSEO API failed: {str(e)}"
         )
     
     # 5. Save raw results to Firestore
