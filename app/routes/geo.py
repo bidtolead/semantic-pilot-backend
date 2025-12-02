@@ -51,11 +51,14 @@ def get_all_locations():
     return {"items": _locations_cache}
 
 @router.get("/suggest")
-def suggest_geo_targets(q: str = Query(..., min_length=2, max_length=80)):
+def suggest_geo_targets(
+    q: str = Query(..., min_length=2, max_length=80),
+    limit: int = Query(default=50, ge=1, le=200)
+):
     """Search locations by query string.
     
-    Uses DataForSEO locations list and filters client-side.
-    Much faster than Google Ads live suggest.
+    Uses DataForSEO locations list and filters server-side.
+    Returns max 50 results by default to reduce memory and bandwidth.
     """
     q = q.strip()
     if not q:
@@ -80,4 +83,5 @@ def suggest_geo_targets(q: str = Query(..., min_length=2, max_length=80)):
     
     results.sort(key=sort_key)
     
-    return {"items": results}
+    # Limit results to prevent memory issues
+    return {"items": results[:limit]}
