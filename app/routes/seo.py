@@ -291,6 +291,25 @@ async def run_keyword_research(
     # 6. Save both raw and structured results to Firestore in ONE operation
     # Path: intakes/{userId}/{intakeId}/keyword_research
     try:
+        # DEBUG: Log what we're about to save
+        print(f"\n=== SAVING TO FIRESTORE ===")
+        print(f"User: {userId}, Intake: {intakeId}")
+        print(f"Raw keywords: {len(raw_output)}")
+        print(f"Primary: {len(structured.get('primary_keywords', []))}")
+        print(f"Secondary: {len(structured.get('secondary_keywords', []))}")
+        print(f"Long-tail: {len(structured.get('long_tail_keywords', []))}")
+        
+        # Log first primary keyword with all fields
+        if structured.get("primary_keywords"):
+            pk = structured["primary_keywords"][0]
+            print(f"\nFirst primary keyword: {pk.get('keyword')}")
+            print(f"  search_volume: {pk.get('search_volume')}")
+            print(f"  competition: {pk.get('competition')}")
+            print(f"  competition_index: {pk.get('competition_index')}")
+            print(f"  low_bid: {pk.get('low_top_of_page_bid_micros')}")
+            print(f"  high_bid: {pk.get('high_top_of_page_bid_micros')}")
+            print(f"  trend_yoy: {pk.get('trend_yoy')}")
+        
         keyword_research_ref = (
             db.collection("intakes")
             .document(userId)
@@ -319,7 +338,10 @@ async def run_keyword_research(
                 "keyword_performance": intake.get("keyword_performance"),
             }
         }, merge=False)
+        
+        print(f"✅ Saved to Firestore successfully")
     except Exception as e:
+        print(f"❌ Failed to save: {e}")
         raise HTTPException(
             status_code=500,
             detail=f"Failed to save results to Firestore: {str(e)}"
