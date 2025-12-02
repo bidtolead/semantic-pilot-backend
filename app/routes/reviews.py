@@ -17,6 +17,15 @@ def _auth(authorization: str | None):
         raise HTTPException(status_code=401, detail="Invalid or expired token")
 
 
+@router.get("/check")
+def check_review_status(authorization: str | None = Header(default=None)):
+    """Check if the current user has already submitted a review."""
+    uid, _ = _auth(authorization)
+    existing_qry = db.collection("reviews").where("uid", "==", uid).limit(1)
+    existing = list(existing_qry.stream())
+    return {"hasSubmitted": len(existing) > 0}
+
+
 @router.post("")
 def submit_review(body: dict, authorization: str | None = Header(default=None)):
     """Users submit a review. Stored as pending approval by default.
