@@ -273,40 +273,7 @@ async def run_keyword_research(
             detail=f"DataForSEO API failed: {str(e)}"
         )
     
-    # 5. Save raw results to Firestore
-    # Path: intakes/{userId}/{intakeId}/keyword_research/raw_output
-    try:
-        # Create nested collection structure
-        keyword_research_ref = (
-            db.collection("intakes")
-            .document(userId)
-            .collection(intakeId)
-            .document("keyword_research")
-        )
-        
-        keyword_research_ref.set({
-            "raw_output": raw_output,
-            "createdAt": gcfirestore.SERVER_TIMESTAMP,
-            "status": "completed",
-            "geo_id": geo_id,
-            "target_location": target_location,
-            "seed_keywords_used": seed_keywords,
-            # Store first 10 keywords for easy debugging in Firestore console
-            "raw_sample": raw_output[:10] if isinstance(raw_output, list) else [],
-            # Store metadata from intake for reference
-            "metadata": {
-                "keyword_intent": intake.get("keyword_intent"),
-                "buyer_journey_stage": intake.get("buyer_journey_stage"),
-                "keyword_performance": intake.get("keyword_performance"),
-            }
-        })
-    except Exception as e:
-        raise HTTPException(
-            status_code=500,
-            detail=f"Failed to save results to Firestore: {str(e)}"
-        )
-    
-    # 6. Step 3: Run AI keyword filtering to produce structured results
+    # 5. Run AI keyword filtering to produce structured results
     try:
         from app.services.keyword_ai_filter import run_keyword_ai_filter
         structured = run_keyword_ai_filter(
@@ -315,30 +282,47 @@ async def run_keyword_research(
             user_id=userId,
             research_id=intakeId,
         )
-
-        # Mirror structured results back into the intake keyword_research doc
-        # so existing frontend views that read from the intakes path work
-        try:
-            mirror_ref = (
-                db.collection("intakes")
-                .document(userId)
-                .collection(intakeId)
-                .document("keyword_research")
-            )
-            mirror_ref.set({
-                "primary_keywords": structured.get("primary_keywords", []),
-                "secondary_keywords": structured.get("secondary_keywords", []),
-                "long_tail_keywords": structured.get("long_tail_keywords", []),
-                "status": "completed",
-            }, merge=True)
-        except Exception:
-            # Non-fatal: if mirroring fails, the canonical copy still exists under research/{userId}/{intakeId}
-            pass
     except Exception as e:
-        # Do not fail the entire flow if AI post-processing fails; return raw stats with error
         raise HTTPException(
             status_code=500,
             detail=f"AI keyword filtering failed: {str(e)}"
+        )
+    
+    # 6. Save both raw and structured results to Firestore in ONE operation
+    # Path: intakes/{userId}/{intakeId}/keyword_research
+    try:
+        keyword_research_ref = (
+            db.collection("intakes")
+            .document(userId)
+            .collection(intakeId)
+            .document("keyword_research")
+        )
+        
+        # Single write with all data - use merge=False to fully replace any stale data
+        keyword_research_ref.set({
+            # Structured results (for frontend display)
+            "primary_keywords": structured.get("primary_keywords", []),
+            "secondary_keywords": structured.get("secondary_keywords", []),
+            "long_tail_keywords": structured.get("long_tail_keywords", []),
+            # Raw data (for debugging and audit trail)
+            "raw_output": raw_output,
+            "raw_sample": raw_output[:10] if isinstance(raw_output, list) else [],
+            # Metadata
+            "status": "completed",
+            "geo_id": geo_id,
+            "target_location": target_location,
+            "seed_keywords_used": seed_keywords,
+            "createdAt": gcfirestore.SERVER_TIMESTAMP,
+            "metadata": {
+                "keyword_intent": intake.get("keyword_intent"),
+                "buyer_journey_stage": intake.get("buyer_journey_stage"),
+                "keyword_performance": intake.get("keyword_performance"),
+            }
+        }, merge=False)
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to save results to Firestore: {str(e)}"
         )
 
     # 7. Increment public stats counter
