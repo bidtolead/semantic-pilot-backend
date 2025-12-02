@@ -216,48 +216,48 @@ def run_keyword_ai_filter(
     print(f"Sample raw keywords: {list(raw_keyword_map.keys())[:5]}")
     
     def validate_and_fix_search_volumes(keywords_list):
-        """Ensure search_volume matches avg_monthly_searches from raw data and merge Google Ads metrics."""
+        """Ensure search_volume matches avg_monthly_searches from raw data and merge Google Ads metrics.
+        
+        CRITICAL: Only include keywords that exist in the raw DataForSEO data.
+        If AI generates a keyword not in raw data, SKIP IT entirely.
+        """
         if not isinstance(keywords_list, list):
             return keywords_list
         
         fixed_keywords = []
         for kw in keywords_list:
             if not isinstance(kw, dict):
-                fixed_keywords.append(kw)
-                continue
+                continue  # Skip non-dict entries
             
             keyword_text = kw.get("keyword", "").lower().strip()
             raw_data = raw_keyword_map.get(keyword_text)
             
-            # DEBUG: Log matching attempt
+            # CRITICAL FIX: If keyword doesn't exist in raw data, SKIP it entirely
             if not raw_data:
-                print(f"⚠️  NO MATCH for '{keyword_text}' (AI output)")
-                print(f"   AI gave search_volume: {kw.get('search_volume')}")
-            else:
-                print(f"✅ MATCH for '{keyword_text}'")
-                print(f"   AI gave: {kw.get('search_volume')} → Correcting to: {raw_data.get('avg_monthly_searches')}")
+                print(f"⚠️  SKIPPING '{keyword_text}' - not found in DataForSEO raw data")
+                print(f"   AI made up search_volume: {kw.get('search_volume')} (invalid)")
+                continue  # Don't add this keyword to results
             
-            # Merge raw Google Ads data if available
-            if raw_data:
-                # Preserve search volume
-                kw["search_volume"] = raw_data.get("avg_monthly_searches", kw.get("search_volume"))
-                
-                # Add Google Ads metrics
-                kw["competition"] = raw_data.get("competition")
-                kw["competition_index"] = raw_data.get("competition_index")
-                kw["low_top_of_page_bid_micros"] = raw_data.get("low_top_of_page_bid_micros")
-                kw["high_top_of_page_bid_micros"] = raw_data.get("high_top_of_page_bid_micros")
-                
-                # Add YoY trend data
-                yoy = raw_data.get("yoy_change")
-                if yoy is not None:
-                    # Format as "+X%" or "-X%"
-                    kw["trend_yoy"] = f"{'+' if yoy > 0 else ''}{yoy}%"
-                else:
-                    kw["trend_yoy"] = "N/A"
-                
-                # Add monthly searches data for potential future use
-                kw["monthly_searches"] = raw_data.get("monthly_searches", [])
+            # Keyword exists in raw data - merge all metrics
+            print(f"✅ MATCH for '{keyword_text}'")
+            print(f"   AI gave: {kw.get('search_volume')} → Using DataForSEO: {raw_data.get('avg_monthly_searches')}")
+            
+            # Replace ALL fields with actual DataForSEO data
+            kw["search_volume"] = raw_data.get("avg_monthly_searches")
+            kw["competition"] = raw_data.get("competition")
+            kw["competition_index"] = raw_data.get("competition_index")
+            kw["low_top_of_page_bid_micros"] = raw_data.get("low_top_of_page_bid_micros")
+            kw["high_top_of_page_bid_micros"] = raw_data.get("high_top_of_page_bid_micros")
+            
+            # Add YoY trend data
+            yoy = raw_data.get("yoy_change")
+            if yoy is not None:
+                kw["trend_yoy"] = f"{'+' if yoy > 0 else ''}{yoy}%"
+            else:
+                kw["trend_yoy"] = "N/A"
+            
+            # Add monthly searches data
+            kw["monthly_searches"] = raw_data.get("monthly_searches", [])
             
             fixed_keywords.append(kw)
         
