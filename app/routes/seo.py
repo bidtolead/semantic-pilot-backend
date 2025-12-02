@@ -3,7 +3,6 @@ from pydantic import BaseModel
 from app.models.seo_models import ResearchRequest
 from firebase_admin import auth as firebase_auth
 from google.cloud import firestore as gcfirestore
-from app.services.google_ads import load_google_ads_client
 from app.services.dataforseo import fetch_keyword_ideas as dfs_fetch_keyword_ideas
 from app.services.firestore import db
 from app.services.keyword_planner_builder import build_keyword_planner_request

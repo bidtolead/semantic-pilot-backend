@@ -11,7 +11,6 @@ cryptography==46.0.3
 distro==1.9.0
 fastapi==0.121.2
 firebase_admin==7.1.0
-google-ads==28.4.0
 google-api-core==2.28.1
 google-auth==2.41.1
 google-auth-oauthlib==1.2.3

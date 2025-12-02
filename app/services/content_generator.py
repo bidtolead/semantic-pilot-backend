@@ -1,7 +1,6 @@
 import os
 import json
 from typing import Any, Dict, List
-from openai import OpenAI
 from app.services.firestore import db
 from google.cloud import firestore as gcfirestore
 from app.utils.blog_ideas_prompt import BLOG_IDEAS_PROMPT
@@ -12,8 +11,16 @@ from app.utils.google_ads_landing_page_prompt import GOOGLE_ADS_LANDING_PAGE_PRO
 from app.utils.google_ads_negative_keywords_prompt import GOOGLE_ADS_NEGATIVE_KEYWORDS_PROMPT
 from app.utils.cost_calculator import calculate_openai_cost
 
-# Initialize OpenAI client
-client = OpenAI()
+# Lazy initialize OpenAI client
+_client = None
+
+def get_openai_client():
+    """Get or create OpenAI client (lazy initialization)."""
+    global _client
+    if _client is None:
+        from openai import OpenAI
+        _client = OpenAI()
+    return _client
 
 
 def _json_default(o):
@@ -88,7 +95,7 @@ def generate_blog_ideas(
     model = os.getenv("OPENAI_MODEL") or _get_model_from_settings()
     
     try:
-        response = client.chat.completions.create(
+        response = get_openai_client().chat.completions.create(
             model=model,
             temperature=0,
             response_format={"type": "json_object"},
@@ -196,7 +203,7 @@ def generate_meta_tags(
     model = os.getenv("OPENAI_MODEL") or _get_model_from_settings()
     
     try:
-        response = client.chat.completions.create(
+        response = get_openai_client().chat.completions.create(
             model=model,
             temperature=0,
             response_format={"type": "json_object"},
@@ -307,7 +314,7 @@ def generate_page_content(
     model = os.getenv("OPENAI_MODEL") or _get_model_from_settings()
     
     try:
-        response = client.chat.completions.create(
+        response = get_openai_client().chat.completions.create(
             model=model,
             temperature=0,
             response_format={"type": "json_object"},
@@ -411,7 +418,7 @@ def generate_google_ads_ad_copy(
     model = os.getenv("OPENAI_MODEL") or _get_model_from_settings()
     
     try:
-        response = client.chat.completions.create(
+        response = get_openai_client().chat.completions.create(
             model=model,
             temperature=0.3,  # Slightly higher for creative ad copy
             response_format={"type": "json_object"},
@@ -504,7 +511,7 @@ def generate_google_ads_landing_page(
     model = os.getenv("OPENAI_MODEL") or _get_model_from_settings()
     
     try:
-        response = client.chat.completions.create(
+        response = get_openai_client().chat.completions.create(
             model=model,
             temperature=0,
             response_format={"type": "json_object"},
@@ -593,7 +600,7 @@ def generate_google_ads_negative_keywords(
     model = os.getenv("OPENAI_MODEL") or _get_model_from_settings()
     
     try:
-        response = client.chat.completions.create(
+        response = get_openai_client().chat.completions.create(
             model=model,
             temperature=0,
             response_format={"type": "json_object"},

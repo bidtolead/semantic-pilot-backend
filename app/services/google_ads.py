@@ -1,5 +1,4 @@
 import os
-from google.ads.googleads.client import GoogleAdsClient
 
 
 def load_google_ads_client():
@@ -10,6 +9,9 @@ def load_google_ads_client():
     Returns:
         tuple[GoogleAdsClient, str | None]: client instance and customer ID.
     """
+    # Lazy import to reduce initial memory usage
+    from google.ads.googleads.client import GoogleAdsClient
+    
     developer_token = os.getenv("GOOGLE_ADS_DEVELOPER_TOKEN")
     client_id = os.getenv("GOOGLE_ADS_CLIENT_ID")
     client_secret = os.getenv("GOOGLE_ADS_CLIENT_SECRET")

@@ -2,15 +2,23 @@ import os
 import json
 from typing import Any, Dict, List, Optional
 
-from openai import OpenAI
+# Lazy import OpenAI
 from datetime import datetime, date
 import time
 from app.services.firestore import db
 from google.cloud import firestore as gcfirestore
 from app.utils.cost_calculator import calculate_openai_cost
 
-# Initialize OpenAI client (OPENAI_API_KEY must be set in env)
-client = OpenAI()
+# Client initialized lazily
+_client = None
+
+def get_openai_client():
+    """Get or create OpenAI client (lazy initialization)."""
+    global _client
+    if _client is None:
+        from openai import OpenAI
+        _client = OpenAI()
+    return _client
 
 PROMPT_FALLBACK = None
 try:
@@ -118,7 +126,7 @@ def run_keyword_ai_filter(
 
     # Call OpenAI once
     def _call_openai(p: str):
-        return client.chat.completions.create(
+        return get_openai_client().chat.completions.create(
             model=os.getenv("OPENAI_MODEL") or model,
             response_format={"type": "json_object"},
             messages=[

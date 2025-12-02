@@ -1,10 +1,18 @@
 import os
 import json
-from openai import OpenAI
+# Lazy import OpenAI
 from app.utils.prompts import KEYWORD_RESEARCH_PROMPT
 
-# Initialize OpenAI client (Render reads OPENAI_API_KEY from env)
-client = OpenAI()
+# Client initialized lazily
+_client = None
+
+def get_openai_client():
+    """Get or create OpenAI client (lazy initialization)."""
+    global _client
+    if _client is None:
+        from openai import OpenAI
+        _client = OpenAI()
+    return _client
 
 def run_keyword_research_pipeline(intake: dict):
     """Run keyword research via OpenAI, with robust error handling.
@@ -17,7 +25,7 @@ def run_keyword_research_pipeline(intake: dict):
     )
 
     try:
-        response = client.chat.completions.create(
+        response = get_openai_client().chat.completions.create(
             model="gpt-4o-mini",
             temperature=0,
             response_format={"type": "json_object"},
