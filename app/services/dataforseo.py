@@ -62,20 +62,13 @@ def fetch_keyword_ideas(
     language_name: str = "English",
     url: Optional[str] = None,
 ) -> List[Dict]:
-    """Fetch keyword ideas via DataForSEO Live endpoint (instant results).
-
-    Uses the LIVE endpoint for real-time results (~7 seconds) instead of 
-    task_post which can take 1-3 hours.
+    """Fetch keyword ideas via DataForSEO 2-step process.
     
-    Cost: $0.75 per 1000 keywords (vs $0.50 for standard)
-    Speed: ~7 seconds (vs 1-3 hours for standard)
-
-    Returns a simplified list of dicts with fields similar to Google Ads output:
-    - keyword
-    - avg_monthly_searches
-    - competition (as float 0-1 mapped to LOW/MEDIUM/HIGH)
-    - competition_index (int scaled 0-100)
-    - low_top_of_page_bid_micros (approx from cpc, same for high)
+    Step 1: Get keyword suggestions from keywords_for_keywords
+    Step 2: Get full metrics (competition, bids) from search_volume
+    
+    Cost: $0.075 per task (Live mode)
+    Speed: ~7-10 seconds total
     
     Args:
         seed_keywords: List of seed keywords
@@ -86,7 +79,7 @@ def fetch_keyword_ideas(
     if not seed_keywords:
         return []
 
-    # Use LIVE endpoint for instant results
+    # STEP 1: Get keyword suggestions (up to 20k keywords)
     url_endpoint = f"{API_BASE}/keywords_data/google_ads/keywords_for_keywords/live"
     
     payload = [{
@@ -124,19 +117,48 @@ def fetch_keyword_ideas(
         return []
     
     result = tasks[0]["result"][0]
-
-    items = result.get("items", [])[:200]  # Limit to top 200 keywords for cost savings
+    items = result.get("items", [])[:200]  # Limit to top 200 keywords
+    
+    # Extract just the keyword strings for Step 2
+    keyword_list = [it.get("keyword") for it in items if it.get("keyword")]
+    
+    if not keyword_list:
+        return []
+    
+    # STEP 2: Get full metrics (competition, bids, YoY) using search_volume endpoint
+    volume_endpoint = f"{API_BASE}/keywords_data/google_ads/search_volume/live"
+    volume_payload = [{
+        "keywords": keyword_list,  # Pass the 200 keywords we got from step 1
+        "location_name": location_name,
+        "language_name": language_name,
+        "search_partners": False,
+    }]
+    
+    try:
+        volume_resp = requests.post(volume_endpoint, json=volume_payload, headers=_auth_header(), timeout=120)
+        volume_resp.raise_for_status()
+        volume_data = volume_resp.json()
+    except Exception as e:
+        raise RuntimeError(f"DataForSEO search_volume API failed: {e}")
+    
+    volume_tasks = volume_data.get("tasks", [])
+    if not volume_tasks or not volume_tasks[0].get("result"):
+        return []
+    
+    volume_items = volume_tasks[0]["result"][0].get("items", [])
+    
+    # Build output with full metrics from search_volume
     out: List[Dict] = []
-    for it in items:
+    for it in volume_items:
         kw = it.get("keyword")
         sv = it.get("search_volume")
-        comp_index = it.get("competition_index")  # 0-100 scale from Google Ads
-        comp_str = it.get("competition")  # "LOW", "MEDIUM", "HIGH" string from Google Ads
-        low_bid = it.get("low_top_of_page_bid")  # dollars
-        high_bid = it.get("high_top_of_page_bid")  # dollars
-        monthly_searches = it.get("monthly_searches", [])  # Array of monthly data
+        comp_index = it.get("competition_index")
+        comp_str = it.get("competition")
+        low_bid = it.get("low_top_of_page_bid")
+        high_bid = it.get("high_top_of_page_bid")
+        monthly_searches = it.get("monthly_searches", [])
 
-        # Convert bids from dollars to micros (Google Ads uses micros)
+        # Convert bids from dollars to micros
         low_micros = int(round(low_bid * 1_000_000)) if low_bid is not None else None
         high_micros = int(round(high_bid * 1_000_000)) if high_bid is not None else None
 
@@ -159,7 +181,7 @@ def fetch_keyword_ideas(
             "low_top_of_page_bid_micros": low_micros,
             "high_top_of_page_bid_micros": high_micros,
             "yoy_change": yoy_change,
-            "monthly_searches": monthly_searches,  # Include raw monthly data
+            "monthly_searches": monthly_searches,
         })
 
     return out
