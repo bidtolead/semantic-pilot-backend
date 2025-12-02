@@ -1,7 +1,14 @@
 from fastapi import APIRouter, HTTPException, Depends, Query, Request
 from app.utils.auth import verify_token
 from app.services.firestore import db
-from app.services.content_generator import generate_blog_ideas, generate_meta_tags, generate_page_content
+from app.services.content_generator import (
+    generate_blog_ideas, 
+    generate_meta_tags, 
+    generate_page_content,
+    generate_google_ads_ad_copy,
+    generate_google_ads_landing_page,
+    generate_google_ads_negative_keywords
+)
 from google.cloud import firestore as gcfirestore
 from slowapi import Limiter
 from slowapi.util import get_remote_address
@@ -269,6 +276,200 @@ async def handle_page_content(
             "status": "success",
             "data": result,
         }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/ad-copy/{user_id}/{research_id}")
+@limiter.limit("20/hour")
+async def handle_ad_copy(
+    request: Request,
+    user_id: str,
+    research_id: str,
+    token_data: dict = Depends(verify_token),
+    generate: bool = Query(default=True),
+):
+    """Generate or retrieve Google Ads ad copy. ADMIN ONLY. Rate limited: 20/hour."""
+    
+    uid = token_data["uid"]
+    user_ref = db.collection("users").document(uid)
+    user_doc = user_ref.get()
+    if not user_doc.exists or user_doc.to_dict().get("role") != "admin":
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    if uid != user_id:
+        raise HTTPException(status_code=403, detail="Not authorized")
+    
+    try:
+        doc_ref = db.collection("intakes").document(user_id).collection(research_id).document("ad_copy")
+        doc = doc_ref.get()
+        
+        if doc.exists and not generate:
+            return {"status": "success", "data": doc.to_dict()}
+        
+        # Credit check
+        user_snapshot = user_ref.get()
+        if not user_snapshot.exists:
+            raise HTTPException(status_code=404, detail="User not found")
+        
+        user_data = user_snapshot.to_dict() or {}
+        if user_data.get("credits", 0) < 1:
+            raise HTTPException(status_code=402, detail="Insufficient credits")
+        
+        user_ref.update({
+            "credits": gcfirestore.Increment(-1),
+            "lastActivity": gcfirestore.SERVER_TIMESTAMP,
+        })
+        
+        # Load intake and keywords
+        doc_id = f"{user_id}_{research_id}"
+        intake_doc = db.collection("research_intakes").document(doc_id).get()
+        if not intake_doc.exists:
+            raise HTTPException(status_code=404, detail="Intake not found")
+        
+        keywords_doc = db.collection("intakes").document(user_id).collection(research_id).document("keyword_research").get()
+        if not keywords_doc.exists:
+            raise HTTPException(status_code=404, detail="Keywords not found")
+        
+        result = generate_google_ads_ad_copy(
+            intake=intake_doc.to_dict(),
+            keywords=keywords_doc.to_dict(),
+            user_id=user_id,
+            research_id=research_id,
+        )
+        
+        return {"status": "success", "data": result}
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/landing-page/{user_id}/{research_id}")
+@limiter.limit("20/hour")
+async def handle_landing_page(
+    request: Request,
+    user_id: str,
+    research_id: str,
+    token_data: dict = Depends(verify_token),
+    generate: bool = Query(default=True),
+):
+    """Generate or retrieve Google Ads landing page recommendations. ADMIN ONLY. Rate limited: 20/hour."""
+    
+    uid = token_data["uid"]
+    user_ref = db.collection("users").document(uid)
+    user_doc = user_ref.get()
+    if not user_doc.exists or user_doc.to_dict().get("role") != "admin":
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    if uid != user_id:
+        raise HTTPException(status_code=403, detail="Not authorized")
+    
+    try:
+        doc_ref = db.collection("intakes").document(user_id).collection(research_id).document("landing_page")
+        doc = doc_ref.get()
+        
+        if doc.exists and not generate:
+            return {"status": "success", "data": doc.to_dict()}
+        
+        user_snapshot = user_ref.get()
+        if not user_snapshot.exists:
+            raise HTTPException(status_code=404, detail="User not found")
+        
+        user_data = user_snapshot.to_dict() or {}
+        if user_data.get("credits", 0) < 1:
+            raise HTTPException(status_code=402, detail="Insufficient credits")
+        
+        user_ref.update({
+            "credits": gcfirestore.Increment(-1),
+            "lastActivity": gcfirestore.SERVER_TIMESTAMP,
+        })
+        
+        doc_id = f"{user_id}_{research_id}"
+        intake_doc = db.collection("research_intakes").document(doc_id).get()
+        if not intake_doc.exists:
+            raise HTTPException(status_code=404, detail="Intake not found")
+        
+        keywords_doc = db.collection("intakes").document(user_id).collection(research_id).document("keyword_research").get()
+        if not keywords_doc.exists:
+            raise HTTPException(status_code=404, detail="Keywords not found")
+        
+        result = generate_google_ads_landing_page(
+            intake=intake_doc.to_dict(),
+            keywords=keywords_doc.to_dict(),
+            user_id=user_id,
+            research_id=research_id,
+        )
+        
+        return {"status": "success", "data": result}
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/negative-keywords/{user_id}/{research_id}")
+@limiter.limit("20/hour")
+async def handle_negative_keywords(
+    request: Request,
+    user_id: str,
+    research_id: str,
+    token_data: dict = Depends(verify_token),
+    generate: bool = Query(default=True),
+):
+    """Generate or retrieve negative keyword recommendations. ADMIN ONLY. Rate limited: 20/hour."""
+    
+    uid = token_data["uid"]
+    user_ref = db.collection("users").document(uid)
+    user_doc = user_ref.get()
+    if not user_doc.exists or user_doc.to_dict().get("role") != "admin":
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    if uid != user_id:
+        raise HTTPException(status_code=403, detail="Not authorized")
+    
+    try:
+        doc_ref = db.collection("intakes").document(user_id).collection(research_id).document("negative_keywords")
+        doc = doc_ref.get()
+        
+        if doc.exists and not generate:
+            return {"status": "success", "data": doc.to_dict()}
+        
+        user_snapshot = user_ref.get()
+        if not user_snapshot.exists:
+            raise HTTPException(status_code=404, detail="User not found")
+        
+        user_data = user_snapshot.to_dict() or {}
+        if user_data.get("credits", 0) < 1:
+            raise HTTPException(status_code=402, detail="Insufficient credits")
+        
+        user_ref.update({
+            "credits": gcfirestore.Increment(-1),
+            "lastActivity": gcfirestore.SERVER_TIMESTAMP,
+        })
+        
+        doc_id = f"{user_id}_{research_id}"
+        intake_doc = db.collection("research_intakes").document(doc_id).get()
+        if not intake_doc.exists:
+            raise HTTPException(status_code=404, detail="Intake not found")
+        
+        keywords_doc = db.collection("intakes").document(user_id).collection(research_id).document("keyword_research").get()
+        if not keywords_doc.exists:
+            raise HTTPException(status_code=404, detail="Keywords not found")
+        
+        result = generate_google_ads_negative_keywords(
+            intake=intake_doc.to_dict(),
+            keywords=keywords_doc.to_dict(),
+            user_id=user_id,
+            research_id=research_id,
+        )
+        
+        return {"status": "success", "data": result}
         
     except HTTPException:
         raise
