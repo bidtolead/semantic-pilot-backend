@@ -20,7 +20,7 @@ def _auth_header() -> dict:
 
 
 def post_keywords_for_seed_task(keywords: List[str], location_name: str, language_name: str = "English") -> str:
-    url = f"{API_BASE}/keywords_data/google_ads/keywords_for_seed/task_post"
+    url = f"{API_BASE}/keywords_data/google_ads/keywords_for_keywords/task_post"
     payload = [{
         "keywords": keywords,
         "location_name": location_name,
@@ -39,7 +39,7 @@ def post_keywords_for_seed_task(keywords: List[str], location_name: str, languag
 
 
 def get_task_result(task_id: str) -> Dict:
-    url = f"{API_BASE}/keywords_data/google_ads/keywords_for_seed/task_get/advanced/{task_id}"
+    url = f"{API_BASE}/keywords_data/google_ads/keywords_for_keywords/task_get/advanced/{task_id}"
     resp = requests.get(url, headers=_auth_header(), timeout=30)
     resp.raise_for_status()
     return resp.json()
@@ -52,7 +52,7 @@ def fetch_keyword_ideas(
     poll_timeout_sec: int = 60,
     poll_interval_sec: float = 2.0,
 ) -> List[Dict]:
-    """Fetch keyword ideas via DataForSEO Keywords for Seed.
+    """Fetch keyword ideas via DataForSEO Keywords for Keywords.
 
     Returns a simplified list of dicts with fields similar to Google Ads output:
     - keyword
