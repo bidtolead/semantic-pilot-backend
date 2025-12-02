@@ -12,12 +12,12 @@ Create `.env` in the backend root (already loaded by `app/core/env.py`). Require
   - `FRONTEND_URL` and `FRONTEND_URL_PROD`
 - OpenAI & Serper (optional)
   - `OPENAI_API_KEY`, `SERPER_API_KEY`
-- DataForSEO (keyword data provider)
+- DataForSEO (keyword data & location provider)
   - `DATAFORSEO_LOGIN` — your DataForSEO account login (email)
   - `DATAFORSEO_PASSWORD` — your API password
   - `DATAFORSEO_API_BASE` — optional, default `https://api.dataforseo.com/v3`
-- (Legacy) Google Ads keys — no longer required for keyword data, kept for optional geo lookup
-  - `GOOGLE_ADS_*`
+
+**Note:** Google Ads credentials are no longer required. All keyword research and location data now comes from DataForSEO.
 
 ## Keyword Research Provider
 

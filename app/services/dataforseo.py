@@ -117,3 +117,27 @@ def fetch_keyword_ideas(
         })
 
     return out
+
+
+def fetch_locations() -> List[Dict]:
+    """Fetch all available Google Ads locations from DataForSEO.
+    
+    Returns a list of location dicts with:
+    - location_code: unique ID
+    - location_name: human-readable name
+    - country_iso_code: 2-letter country code
+    - location_type: "Country", "City", "Region", etc.
+    
+    This is a free endpoint and can be cached client-side.
+    """
+    url = f"{API_BASE}/keywords_data/google_ads/locations"
+    resp = requests.get(url, headers=_auth_header(), timeout=30)
+    resp.raise_for_status()
+    data = resp.json()
+    
+    tasks = data.get("tasks", [])
+    if not tasks or not tasks[0].get("result"):
+        return []
+    
+    locations = tasks[0]["result"]
+    return locations

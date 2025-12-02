@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException, Query
 from typing import List, Dict, Any
-from app.services.google_ads import load_google_ads_client
+from app.services.dataforseo import fetch_locations
 
 router = APIRouter(prefix="/geo", tags=["Geo"])
 
@@ -9,54 +9,64 @@ ALLOWED_COUNTRY_CODES = {
     "SG", "AE", "IL", "ZA", "PH", "IN", "NG"
 }
 
+# Cache locations in memory after first call
+_locations_cache: List[Dict] = None
+
+@router.get("/locations")
+def get_all_locations():
+    """Get all available Google Ads locations from DataForSEO.
+    
+    Returns the full list for client-side caching. This is a free endpoint.
+    Filters to allowed countries and excludes postal codes.
+    """
+    global _locations_cache
+    
+    if _locations_cache is None:
+        try:
+            raw_locations = fetch_locations()
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"DataForSEO locations failed: {e}")
+        
+        # Filter and format
+        filtered = []
+        for loc in raw_locations:
+            country = (loc.get("country_iso_code") or "").upper()
+            loc_type = loc.get("location_type", "")
+            
+            # Skip postal codes and non-allowed countries
+            if loc_type == "Postal code":
+                continue
+            if country and country not in ALLOWED_COUNTRY_CODES:
+                continue
+            
+            filtered.append({
+                "id": str(loc.get("location_code")),
+                "name": loc.get("location_name"),
+                "countryCode": country,
+                "targetType": loc_type,
+            })
+        
+        _locations_cache = filtered
+    
+    return {"items": _locations_cache}
+
 @router.get("/suggest")
 def suggest_geo_targets(q: str = Query(..., min_length=2, max_length=80)):
+    """Search locations by query string.
+    
+    Uses DataForSEO locations list and filters client-side.
+    Much faster than Google Ads live suggest.
+    """
     q = q.strip()
     if not q:
         raise HTTPException(status_code=400, detail="Query must not be empty")
-
-    try:
-        client, customer_id = load_google_ads_client()
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Google Ads config error: {e}")
-
-    service = client.get_service("GeoTargetConstantService")
-    request = client.get_type("SuggestGeoTargetConstantsRequest")
-
-    request.locale = "en"
-    request.location_names.names.append(q)
-
-    try:
-        response = service.suggest_geo_target_constants(request=request)
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Geo suggestion failed: {e}")
-
-    results = []
-
-    for s in response.geo_target_constant_suggestions:
-        geo = s.geo_target_constant
-
-        if geo.status.name != "ENABLED":
-            continue
-
-        country = (geo.country_code or "").upper()
-        if country and country not in ALLOWED_COUNTRY_CODES:
-            continue
-
-        # Filter out postal codes
-        if geo.target_type == "POSTAL_CODE":
-            continue
-
-        results.append({
-            "id": str(geo.id),
-            "name": geo.name,
-            "countryCode": country,
-            "targetType": geo.target_type,
-        })
-
-    # Filter to only show results that contain the search query
+    
+    # Get full locations list (cached)
+    all_locs = get_all_locations()["items"]
+    
+    # Filter to matching names
     query_lower = q.lower()
-    results = [r for r in results if query_lower in r["name"].lower()]
+    results = [loc for loc in all_locs if query_lower in loc["name"].lower()]
     
     # Sort by relevance: exact matches first, then starts-with, then contains
     def sort_key(item):
@@ -69,5 +79,5 @@ def suggest_geo_targets(q: str = Query(..., min_length=2, max_length=80)):
             return (2, name_lower)
     
     results.sort(key=sort_key)
-
+    
     return {"items": results}
