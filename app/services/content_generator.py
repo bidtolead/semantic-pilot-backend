@@ -67,6 +67,7 @@ def generate_blog_ideas(
         "primary_keywords": keywords.get("primary_keywords", []),
         "secondary_keywords": keywords.get("secondary_keywords", []),
         "long_tail_keywords": keywords.get("long_tail_keywords", []),
+        "deleted_keywords": keywords.get("deleted_keywords", []),
     }
     
     prompt = BLOG_IDEAS_PROMPT.replace(
@@ -76,6 +77,10 @@ def generate_blog_ideas(
         "{final_keywords}",
         json.dumps(final_keywords, ensure_ascii=False, indent=2, default=_json_default),
     )
+    # Provide explicit guidance about deleted keywords
+    if final_keywords.get("deleted_keywords"):
+        prompt += "\n\nNOTE: The following keywords were explicitly removed by the user. Treat them as context only—do NOT target them directly unless essential for coherence. Removed Keywords: " + \
+            ", ".join([k.get("keyword", "") if isinstance(k, dict) else str(k) for k in final_keywords["deleted_keywords"] if k])
     
     model = os.getenv("OPENAI_MODEL") or _get_model_from_settings()
     
@@ -171,6 +176,7 @@ def generate_meta_tags(
         "primary_keywords": keywords.get("primary_keywords", []),
         "secondary_keywords": keywords.get("secondary_keywords", []),
         "long_tail_keywords": keywords.get("long_tail_keywords", []),
+        "deleted_keywords": keywords.get("deleted_keywords", []),
     }
     
     prompt = META_TAGS_PROMPT.replace(
@@ -180,6 +186,9 @@ def generate_meta_tags(
         "{final_keywords}",
         json.dumps(final_keywords, ensure_ascii=False, indent=2, default=_json_default),
     )
+    if final_keywords.get("deleted_keywords"):
+        prompt += "\n\nDO NOT optimize for these removed keywords directly: " + \
+            ", ".join([k.get("keyword", "") if isinstance(k, dict) else str(k) for k in final_keywords["deleted_keywords"] if k])
     
     model = os.getenv("OPENAI_MODEL") or _get_model_from_settings()
     
@@ -278,6 +287,7 @@ def generate_page_content(
         "primary_keywords": keywords.get("primary_keywords", []),
         "secondary_keywords": keywords.get("secondary_keywords", []),
         "long_tail_keywords": keywords.get("long_tail_keywords", []),
+        "deleted_keywords": keywords.get("deleted_keywords", []),
     }
     
     prompt = CONTENT_PROMPT.replace(
@@ -287,6 +297,9 @@ def generate_page_content(
         "{final_keywords}",
         json.dumps(final_keywords, ensure_ascii=False, indent=2, default=_json_default),
     )
+    if final_keywords.get("deleted_keywords"):
+        prompt += "\n\nAvoid focusing on removed keywords; treat them only as context: " + \
+            ", ".join([k.get("keyword", "") if isinstance(k, dict) else str(k) for k in final_keywords["deleted_keywords"] if k])
     
     model = os.getenv("OPENAI_MODEL") or _get_model_from_settings()
     
