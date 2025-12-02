@@ -54,11 +54,17 @@ async def run_research(
         seed_keywords=req.suggested_keywords,
         location_name=req.location,
     )
+    
+    # DEBUG: Return first keyword's raw data to inspect DataForSEO response
+    debug_sample = None
+    if raw_keywords and len(raw_keywords) > 0:
+        debug_sample = raw_keywords[0]
 
     return {
         "keywords_raw": raw_keywords,
         "location_used": req.location,
         "location_id": req.location_id,
+        "debug_first_keyword": debug_sample,
     }
 
 

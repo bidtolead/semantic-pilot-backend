@@ -104,6 +104,18 @@ def fetch_keyword_ideas(
         resp = requests.post(url_endpoint, json=payload, headers=_auth_header(), timeout=120)
         resp.raise_for_status()
         data = resp.json()
+        
+        # Debug: Log first keyword's raw data to understand the response structure
+        if data.get("tasks") and data["tasks"][0].get("result") and data["tasks"][0]["result"][0].get("items"):
+            sample = data["tasks"][0]["result"][0]["items"][0]
+            print(f"DEBUG DataForSEO sample keyword: {sample.get('keyword')}")
+            print(f"  search_volume: {sample.get('search_volume')}")
+            print(f"  competition: {sample.get('competition')}")
+            print(f"  competition_index: {sample.get('competition_index')}")
+            print(f"  low_top_of_page_bid: {sample.get('low_top_of_page_bid')}")
+            print(f"  high_top_of_page_bid: {sample.get('high_top_of_page_bid')}")
+            print(f"  monthly_searches (first 3): {sample.get('monthly_searches', [])[:3]}")
+            
     except Exception as e:
         raise RuntimeError(f"DataForSEO Live API failed: {e}")
     
