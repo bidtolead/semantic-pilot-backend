@@ -5,7 +5,9 @@ import requests
 from typing import List, Dict, Optional
 
 
-API_BASE = os.getenv("DATAFORSEO_API_BASE", "https://api.dataforseo.com/v3")
+# Ensure API_BASE is clean (strip any trailing slash or typos)
+_raw_base = os.getenv("DATAFORSEO_API_BASE", "https://api.dataforseo.com/v3")
+API_BASE = _raw_base.rstrip("/").replace("v3)", "v3")  # Fix common typo
 
 
 def _auth_header() -> dict:
