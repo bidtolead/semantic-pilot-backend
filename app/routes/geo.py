@@ -14,35 +14,33 @@ _locations_cache: List[Dict] = None
 
 @router.get("/locations")
 def get_all_locations():
-    """Get all available Google Ads locations from DataForSEO.
+    """Get filtered Google Ads locations from DataForSEO.
     
-    Returns the full list for client-side caching. This is a free endpoint.
+    Returns locations for English-speaking countries only.
     Filters to allowed countries and excludes postal codes.
     """
     global _locations_cache
     
     if _locations_cache is None:
         try:
+            # fetch_locations() now returns pre-filtered data (English-speaking countries only)
             raw_locations = fetch_locations()
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"DataForSEO locations failed: {e}")
         
-        # Filter and format
+        # Additional filtering for postal codes
         filtered = []
         for loc in raw_locations:
-            country = (loc.get("country_iso_code") or "").upper()
             loc_type = loc.get("location_type", "")
             
-            # Skip postal codes and non-allowed countries
+            # Skip postal codes
             if loc_type == "Postal code":
-                continue
-            if country and country not in ALLOWED_COUNTRY_CODES:
                 continue
             
             filtered.append({
                 "id": str(loc.get("location_code")),
                 "name": loc.get("location_name"),
-                "countryCode": country,
+                "countryCode": (loc.get("country_iso_code") or "").upper(),
                 "targetType": loc_type,
             })
         
