@@ -79,7 +79,7 @@ def fetch_keyword_ideas(
     if not result:
         raise TimeoutError("DataForSEO: task result not ready in time")
 
-    items = result.get("items", [])
+    items = result.get("items", [])[:200]  # Limit to top 200 keywords for cost savings
     out: List[Dict] = []
     for it in items:
         kw = it.get("keyword")
