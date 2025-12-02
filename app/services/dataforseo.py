@@ -39,7 +39,7 @@ def post_keywords_for_seed_task(keywords: List[str], location_name: str, languag
 
 
 def get_task_result(task_id: str) -> Dict:
-    url = f"{API_BASE}/keywords_data/google_ads/keywords_for_keywords/task_get/advanced/{task_id}"
+    url = f"{API_BASE}/keywords_data/google_ads/keywords_for_keywords/task_get/{task_id}"
     resp = requests.get(url, headers=_auth_header(), timeout=30)
     resp.raise_for_status()
     return resp.json()
