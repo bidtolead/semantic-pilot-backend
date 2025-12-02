@@ -253,9 +253,13 @@ async def run_keyword_research(
     
     # 4. Call fetch_keyword_ideas() from google_ads.py
     try:
+        # Get target URL from intake
+        target_url = intake.get("target_page_url", "").strip()
+        
         raw_output = dfs_fetch_keyword_ideas(
             seed_keywords=seed_keywords,
             location_name=target_location,
+            url=target_url if target_url else None,
         )
     except Exception as e:
         raise HTTPException(

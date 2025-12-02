@@ -19,14 +19,25 @@ def _auth_header() -> dict:
     return {"Authorization": f"Basic {token}", "Content-Type": "application/json"}
 
 
-def post_keywords_for_seed_task(keywords: List[str], location_name: str, language_name: str = "English") -> str:
-    url = f"{API_BASE}/keywords_data/google_ads/keywords_for_keywords/task_post"
+def post_keywords_for_seed_task(
+    keywords: List[str], 
+    location_name: str, 
+    language_name: str = "English",
+    url: Optional[str] = None
+) -> str:
+    url_endpoint = f"{API_BASE}/keywords_data/google_ads/keywords_for_keywords/task_post"
     payload = [{
         "keywords": keywords,
         "location_name": location_name,
         "language_name": language_name,
     }]
-    resp = requests.post(url, json=payload, headers=_auth_header(), timeout=30)
+    
+    # Add URL if provided for better keyword targeting
+    if url:
+        payload[0]["url"] = url
+    
+    resp = requests.post(url_endpoint, json=payload, headers=_auth_header(), timeout=30)
+    resp.raise_for_status()
     resp.raise_for_status()
     data = resp.json()
     tasks = (data or {}).get("tasks", [])
@@ -51,6 +62,7 @@ def fetch_keyword_ideas(
     language_name: str = "English",
     poll_timeout_sec: int = 180,
     poll_interval_sec: float = 3.0,
+    url: Optional[str] = None,
 ) -> List[Dict]:
     """Fetch keyword ideas via DataForSEO Keywords for Keywords.
 
@@ -60,11 +72,19 @@ def fetch_keyword_ideas(
     - competition (as float 0-1 mapped to LOW/MEDIUM/HIGH)
     - competition_index (int scaled 0-100)
     - low_top_of_page_bid_micros (approx from cpc, same for high)
+    
+    Args:
+        seed_keywords: List of seed keywords
+        location_name: Location name (e.g., "New Zealand")
+        language_name: Language (default "English")
+        poll_timeout_sec: Max time to wait for results
+        poll_interval_sec: Polling interval
+        url: Optional URL to analyze for keyword suggestions
     """
     if not seed_keywords:
         return []
 
-    task_id = post_keywords_for_seed_task(seed_keywords, location_name, language_name)
+    task_id = post_keywords_for_seed_task(seed_keywords, location_name, language_name, url)
 
     deadline = time.time() + poll_timeout_sec
     result = None
