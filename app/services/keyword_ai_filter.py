@@ -196,14 +196,15 @@ def run_keyword_ai_filter(
         raise ValueError(f"Invalid JSON from model: {e}: {snippet}")
 
     # Validate and correct search_volume values against raw data
+    # Also merge in all Google Ads metrics (competition, bid data, etc.)
     raw_keyword_map = {
-        item.get("keyword", "").lower(): item.get("avg_monthly_searches", 0)
+        item.get("keyword", "").lower(): item
         for item in raw_output
         if isinstance(item, dict)
     }
     
     def validate_and_fix_search_volumes(keywords_list):
-        """Ensure search_volume matches avg_monthly_searches from raw data."""
+        """Ensure search_volume matches avg_monthly_searches from raw data and merge Google Ads metrics."""
         if not isinstance(keywords_list, list):
             return keywords_list
         
@@ -214,11 +215,18 @@ def run_keyword_ai_filter(
                 continue
             
             keyword_text = kw.get("keyword", "").lower()
-            ai_volume = kw.get("search_volume")
-            actual_volume = raw_keyword_map.get(keyword_text)
+            raw_data = raw_keyword_map.get(keyword_text)
             
-            if actual_volume is not None and ai_volume != actual_volume:
-                kw["search_volume"] = actual_volume
+            # Merge raw Google Ads data if available
+            if raw_data:
+                # Preserve search volume
+                kw["search_volume"] = raw_data.get("avg_monthly_searches", kw.get("search_volume"))
+                
+                # Add Google Ads metrics
+                kw["competition"] = raw_data.get("competition")
+                kw["competition_index"] = raw_data.get("competition_index")
+                kw["low_top_of_page_bid_micros"] = raw_data.get("low_top_of_page_bid_micros")
+                kw["high_top_of_page_bid_micros"] = raw_data.get("high_top_of_page_bid_micros")
             
             fixed_keywords.append(kw)
         
