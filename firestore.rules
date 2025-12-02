@@ -51,6 +51,20 @@ service cloud.firestore {
       allow delete: if false;
     }
 
+    // Keyword research document: enforce deleted keyword limit <= 3
+    match /intakes/{userId}/{researchId}/keyword_research {
+      allow read: if isOwner(userId) || isAdmin();
+      allow create: if isOwner(userId) || isAdmin();
+      allow update: if (isOwner(userId) || isAdmin()) &&
+        (
+          // Allow if field not present OR size within limit
+          !('deleted_keywords' in request.resource.data) ||
+          (request.resource.data.deleted_keywords.size() <= 3 &&
+           request.resource.data.deleted_keywords.size() >= resource.data.deleted_keywords.size())
+        );
+      allow delete: if isOwner(userId) || isAdmin();
+    }
+
     match /intakes/{userId}/{documents=**} {
       allow read: if isOwner(userId) || isAdmin();
       allow write: if isOwner(userId) || isAdmin();
