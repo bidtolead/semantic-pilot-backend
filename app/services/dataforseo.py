@@ -60,11 +60,15 @@ def fetch_keyword_ideas(
     seed_keywords: List[str],
     location_name: str,
     language_name: str = "English",
-    poll_timeout_sec: int = 180,
-    poll_interval_sec: float = 3.0,
     url: Optional[str] = None,
 ) -> List[Dict]:
-    """Fetch keyword ideas via DataForSEO Keywords for Keywords.
+    """Fetch keyword ideas via DataForSEO Live endpoint (instant results).
+
+    Uses the LIVE endpoint for real-time results (~7 seconds) instead of 
+    task_post which can take 1-3 hours.
+    
+    Cost: $0.75 per 1000 keywords (vs $0.50 for standard)
+    Speed: ~7 seconds (vs 1-3 hours for standard)
 
     Returns a simplified list of dicts with fields similar to Google Ads output:
     - keyword
@@ -77,27 +81,36 @@ def fetch_keyword_ideas(
         seed_keywords: List of seed keywords
         location_name: Location name (e.g., "New Zealand")
         language_name: Language (default "English")
-        poll_timeout_sec: Max time to wait for results
-        poll_interval_sec: Polling interval
         url: Optional URL to analyze for keyword suggestions
     """
     if not seed_keywords:
         return []
 
-    task_id = post_keywords_for_seed_task(seed_keywords, location_name, language_name, url)
-
-    deadline = time.time() + poll_timeout_sec
-    result = None
-    while time.time() < deadline:
-        data = get_task_result(task_id)
-        tasks = data.get("tasks", [])
-        if tasks and tasks[0].get("result"):
-            result = tasks[0]["result"][0]
-            break
-        time.sleep(poll_interval_sec)
-
-    if not result:
-        raise TimeoutError("DataForSEO: task result not ready in time")
+    # Use LIVE endpoint for instant results
+    url_endpoint = f"{API_BASE}/keywords_data/google_ads/keywords_for_keywords/live"
+    
+    payload = [{
+        "keywords": seed_keywords,
+        "location_name": location_name,
+        "language_name": language_name,
+    }]
+    
+    # Add URL if provided for better keyword targeting
+    if url:
+        payload[0]["url"] = url
+    
+    try:
+        resp = requests.post(url_endpoint, json=payload, headers=_auth_header(), timeout=120)
+        resp.raise_for_status()
+        data = resp.json()
+    except Exception as e:
+        raise RuntimeError(f"DataForSEO Live API failed: {e}")
+    
+    tasks = data.get("tasks", [])
+    if not tasks or not tasks[0].get("result"):
+        return []
+    
+    result = tasks[0]["result"][0]
 
     items = result.get("items", [])[:200]  # Limit to top 200 keywords for cost savings
     out: List[Dict] = []
