@@ -118,38 +118,36 @@ def fetch_keyword_ideas(
     for it in items:
         kw = it.get("keyword")
         sv = it.get("search_volume")
-        comp = it.get("competition")  # float 0..1
-        cpc = it.get("cpc")  # dollars
+        comp_index = it.get("competition_index")  # 0-100 scale from Google Ads
+        comp_str = it.get("competition")  # "LOW", "MEDIUM", "HIGH" string from Google Ads
+        low_bid = it.get("low_top_of_page_bid")  # dollars
+        high_bid = it.get("high_top_of_page_bid")  # dollars
+        monthly_searches = it.get("monthly_searches", [])  # Array of monthly data
 
-        # Map competition float to label & index
-        if comp is None:
-            comp_label = None
-            comp_index = None
-        else:
-            if comp < 0.33:
-                comp_label = "LOW"
-            elif comp < 0.66:
-                comp_label = "MEDIUM"
-            else:
-                comp_label = "HIGH"
-            comp_index = int(round(comp * 100))
+        # Convert bids from dollars to micros (Google Ads uses micros)
+        low_micros = int(round(low_bid * 1_000_000)) if low_bid is not None else None
+        high_micros = int(round(high_bid * 1_000_000)) if high_bid is not None else None
 
-        # Convert CPC dollars to micros and provide a simple low/high band
-        if cpc is None:
-            low_micros = None
-            high_micros = None
-        else:
-            micros = int(round(cpc * 1_000_000))
-            low_micros = int(micros * 0.7)
-            high_micros = int(micros * 1.3)
+        # Calculate YoY change from monthly_searches array
+        yoy_change = None
+        if monthly_searches and len(monthly_searches) >= 12:
+            try:
+                current_month = monthly_searches[0].get("search_volume")
+                year_ago_month = monthly_searches[11].get("search_volume")
+                if current_month is not None and year_ago_month is not None and year_ago_month > 0:
+                    yoy_change = round(((current_month - year_ago_month) / year_ago_month) * 100, 1)
+            except (IndexError, KeyError, ZeroDivisionError):
+                pass
 
         out.append({
             "keyword": kw,
             "avg_monthly_searches": sv,
-            "competition": comp_label,
+            "competition": comp_str,
             "competition_index": comp_index,
             "low_top_of_page_bid_micros": low_micros,
             "high_top_of_page_bid_micros": high_micros,
+            "yoy_change": yoy_change,
+            "monthly_searches": monthly_searches,  # Include raw monthly data
         })
 
     return out
