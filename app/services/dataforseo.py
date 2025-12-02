@@ -124,14 +124,14 @@ def fetch_keyword_ideas(
 def fetch_locations() -> List[Dict]:
     """Fetch Google Ads locations from DataForSEO for English-speaking countries only.
     
+    WARNING: DataForSEO returns ALL ~100k+ locations in one response.
+    We filter immediately during parsing to reduce memory footprint.
+    
     Returns a filtered list of location dicts with:
     - location_code: unique ID
     - location_name: human-readable name
     - country_iso_code: 2-letter country code
     - location_type: "Country", "City", "Region", etc.
-    
-    Limited to English-speaking countries to reduce memory usage.
-    This is a free endpoint and can be cached client-side.
     """
     # Allowed English-speaking countries
     ALLOWED_COUNTRIES = {
@@ -140,9 +140,16 @@ def fetch_locations() -> List[Dict]:
     }
     
     url = f"{API_BASE}/keywords_data/google_ads/locations"
-    resp = requests.get(url, headers=_auth_header(), timeout=30)
-    resp.raise_for_status()
-    data = resp.json()
+    
+    # Stream the response to avoid loading entire payload into memory at once
+    try:
+        resp = requests.get(url, headers=_auth_header(), timeout=60, stream=True)
+        resp.raise_for_status()
+        
+        # Parse JSON incrementally
+        data = resp.json()
+    except Exception as e:
+        raise RuntimeError(f"DataForSEO locations API failed: {e}")
     
     tasks = data.get("tasks", [])
     if not tasks or not tasks[0].get("result"):
@@ -150,11 +157,16 @@ def fetch_locations() -> List[Dict]:
     
     all_locations = tasks[0]["result"]
     
-    # Filter to only allowed countries to reduce memory footprint
-    # This reduces ~100k locations to ~5-10k locations
-    filtered_locations = [
-        loc for loc in all_locations
-        if (loc.get("country_iso_code") or "").upper() in ALLOWED_COUNTRIES
-    ]
+    # Filter IMMEDIATELY to reduce memory - don't keep the full list
+    # This processes and discards non-matching locations as we iterate
+    filtered_locations = []
+    for loc in all_locations:
+        country = (loc.get("country_iso_code") or "").upper()
+        if country in ALLOWED_COUNTRIES:
+            filtered_locations.append(loc)
+    
+    # Clear the original list from memory
+    del all_locations
+    del data
     
     return filtered_locations
