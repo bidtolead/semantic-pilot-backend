@@ -420,3 +420,127 @@ async def debug_keyword_research(
         "raw_google_sample": raw_output[:10],  # First 10 for inspection
         "mismatches": [c for c in comparison if c.get("match") == False],
     }
+
+
+@router.delete("/keyword-research/delete/{userId}/{intakeId}")
+async def delete_keyword_research(
+    userId: str,
+    intakeId: str,
+    authorization: str | None = Header(default=None)
+):
+    """
+    Delete keyword research data to allow re-running with fresh data.
+    Useful for clearing stale cached results.
+    """
+    uid = get_uid(authorization)
+    
+    # Security check
+    if uid != userId:
+        raise HTTPException(status_code=403, detail="Unauthorized")
+    
+    try:
+        # Delete the keyword_research document
+        keyword_research_ref = (
+            db.collection("intakes")
+            .document(userId)
+            .collection(intakeId)
+            .document("keyword_research")
+        )
+        keyword_research_ref.delete()
+        
+        return {
+            "success": True,
+            "message": f"Deleted keyword research for intakeId={intakeId}. You can now re-run the research."
+        }
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to delete research: {str(e)}"
+        )
+
+
+@router.post("/keyword-research/reprocess/{userId}/{intakeId}")
+async def reprocess_keyword_research(
+    userId: str,
+    intakeId: str,
+    authorization: str | None = Header(default=None)
+):
+    """
+    Re-run the AI filter on existing raw_output to fix stale data.
+    Use this to update old research with new DataForSEO metrics without re-running the API.
+    """
+    uid = get_uid(authorization)
+    
+    # Security check
+    if uid != userId:
+        raise HTTPException(status_code=403, detail="Unauthorized")
+    
+    try:
+        # Get existing keyword_research document
+        keyword_research_ref = (
+            db.collection("intakes")
+            .document(userId)
+            .collection(intakeId)
+            .document("keyword_research")
+        )
+        doc = keyword_research_ref.get()
+        
+        if not doc.exists:
+            raise HTTPException(status_code=404, detail="No keyword research found")
+        
+        data = doc.to_dict()
+        raw_output = data.get("raw_output", [])
+        
+        if not raw_output:
+            raise HTTPException(status_code=400, detail="No raw_output data found to reprocess")
+        
+        # Get intake data
+        intake_doc_id = f"{userId}_{intakeId}"
+        intake_ref = db.collection("research_intakes").document(intake_doc_id)
+        intake_doc = intake_ref.get()
+        
+        if not intake_doc.exists:
+            raise HTTPException(status_code=404, detail="Intake not found")
+        
+        intake = intake_doc.to_dict()
+        
+        # Re-run AI filter
+        from app.services.keyword_ai_filter import run_keyword_ai_filter
+        structured = run_keyword_ai_filter(
+            intake=intake,
+            raw_output=raw_output,
+            user_id=userId,
+            research_id=intakeId,
+        )
+        
+        # Save updated structured data (merge=False to fully replace)
+        keyword_research_ref.set({
+            "primary_keywords": structured.get("primary_keywords", []),
+            "secondary_keywords": structured.get("secondary_keywords", []),
+            "long_tail_keywords": structured.get("long_tail_keywords", []),
+            "raw_output": raw_output,
+            "raw_sample": raw_output[:10] if isinstance(raw_output, list) else [],
+            "status": "completed",
+            "geo_id": data.get("geo_id"),
+            "target_location": data.get("target_location"),
+            "seed_keywords_used": data.get("seed_keywords_used", []),
+            "createdAt": data.get("createdAt"),
+            "reprocessedAt": gcfirestore.SERVER_TIMESTAMP,
+            "metadata": data.get("metadata", {}),
+        }, merge=False)
+        
+        return {
+            "success": True,
+            "message": "Research reprocessed successfully",
+            "primary_keywords_count": len(structured.get("primary_keywords", [])),
+            "secondary_keywords_count": len(structured.get("secondary_keywords", [])),
+            "long_tail_keywords_count": len(structured.get("long_tail_keywords", [])),
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to reprocess research: {str(e)}"
+        )
