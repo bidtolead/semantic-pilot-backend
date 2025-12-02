@@ -37,12 +37,15 @@ def _get_model_from_settings():
     return model
 
 
-def _update_user_metrics(user_id: str, token_usage: dict, cost: float):
+def _update_user_metrics(user_id: str, token_usage: dict, cost: float, model: str):
     """Update user token usage and spending."""
     try:
         user_ref = db.collection("users").document(user_id)
         user_ref.update({
-            "tokenUsage": gcfirestore.Increment(token_usage["total_tokens"]),
+            "tokenUsage": gcfirestore.Increment(token_usage.get("total_tokens", 0)),
+            "promptTokens": gcfirestore.Increment(token_usage.get("prompt_tokens", 0)),
+            "completionTokens": gcfirestore.Increment(token_usage.get("completion_tokens", 0)),
+            "model": model,
             "totalSpend": gcfirestore.Increment(cost),
             "lastActivity": gcfirestore.SERVER_TIMESTAMP,
         })
@@ -105,7 +108,7 @@ def generate_blog_ideas(
     cost = calculate_openai_cost(
         prompt_tokens=token_usage["prompt_tokens"],
         completion_tokens=token_usage["completion_tokens"],
-        model="gpt-4o-mini"
+        model=model
     )
     token_usage["estimated_cost_usd"] = cost
     
@@ -135,7 +138,7 @@ def generate_blog_ideas(
     doc_ref.set(firestore_payload)
     
     # Update user metrics
-    _update_user_metrics(user_id, token_usage, cost)
+    _update_user_metrics(user_id, token_usage, cost, model)
     
     # Update public stats counter
     try:
