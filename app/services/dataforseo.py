@@ -93,6 +93,7 @@ def fetch_keyword_ideas(
         "keywords": seed_keywords,
         "location_name": location_name,
         "language_name": language_name,
+        "search_partners": False,  # Exclude search partners to match Google Ads Keyword Planner
     }]
     
     # Add URL if provided for better keyword targeting
