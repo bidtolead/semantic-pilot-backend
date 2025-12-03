@@ -238,10 +238,13 @@ def fetch_keyword_ideas(
         logger.warning(f"DataForSEO Step 2 returned no results")
         return []
     
-    volume_items = volume_tasks[0]["result"][0].get("items", [])
+    # IMPORTANT: result is already an array of keyword items, not a wrapper object with "items"
+    volume_items = volume_tasks[0]["result"]
     if not volume_items:
         logger.warning(f"DataForSEO Step 2 returned no items")
         return []
+    
+    logger.info(f"DataForSEO Step 2 returned {len(volume_items)} keywords with full metrics")
     
     # Build output with full metrics from search_volume
     # CRITICAL: Only use exact values from DataForSEO, never make up numbers
