@@ -166,12 +166,14 @@ def fetch_keyword_ideas(
         return []
     
     # Clean seed keywords: remove trailing periods, extra spaces, and invalid characters
-    # Google Ads doesn't allow certain symbols at the end of keywords
+    # Google Ads doesn't allow certain symbols at the end of keywords or commas within them
     cleaned_seeds = []
     for kw in seed_keywords:
         if kw:
             # Strip whitespace and trailing periods/commas
             cleaned = kw.strip().rstrip('.,;:!?')
+            # Remove commas from within the keyword (Google Ads doesn't allow them)
+            cleaned = cleaned.replace(',', '')
             # Remove extra whitespace
             cleaned = ' '.join(cleaned.split())
             if cleaned:
