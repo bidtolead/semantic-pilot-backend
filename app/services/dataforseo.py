@@ -229,6 +229,20 @@ def fetch_keyword_ideas(
     return out
 
 
+def get_dataforseo_cost() -> float:
+    """Return the cost per DataForSEO request.
+    
+    DataForSEO pricing:
+    - keywords_for_keywords (Step 1): $0.015 per request (Live)
+    - search_volume (Step 2): $0.015 per request (Live)
+    - Total cost per fetch_keyword_ideas call: $0.03
+    
+    Returns:
+        Cost in USD
+    """
+    return 0.03  # $0.015 x 2 steps
+
+
 def fetch_locations() -> List[Dict]:
     """Fetch Google Ads locations from DataForSEO for English-speaking countries only.
     

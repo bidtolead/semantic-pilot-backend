@@ -55,6 +55,16 @@ async def run_research(
         location_name=req.location,
     )
     
+    # Track DataForSEO spend
+    try:
+        from app.services.dataforseo import get_dataforseo_cost
+        dataforseo_cost = get_dataforseo_cost()
+        user_ref.update({
+            "dataforseoSpend": gcfirestore.Increment(dataforseo_cost)
+        })
+    except Exception:
+        pass  # Non-critical
+    
     # DEBUG: Return first keyword's raw data to inspect DataForSEO response
     debug_sample = None
     if raw_keywords and len(raw_keywords) > 0:
@@ -126,6 +136,17 @@ async def keyword_research(
             seed_keywords=kp_payload["seed_keywords"],
             location_name=target_location,
         )
+        
+        # Track DataForSEO spend
+        try:
+            from app.services.dataforseo import get_dataforseo_cost
+            dataforseo_cost = get_dataforseo_cost()
+            user_ref.update({
+                "dataforseoSpend": gcfirestore.Increment(dataforseo_cost)
+            })
+        except Exception:
+            pass  # Non-critical
+            
     except Exception as e:
         raise HTTPException(
             status_code=500,
@@ -263,6 +284,17 @@ async def run_keyword_research(
             location_name=target_location,
             url=target_url if target_url else None,
         )
+        
+        # Track DataForSEO spend
+        try:
+            from app.services.dataforseo import get_dataforseo_cost
+            dataforseo_cost = get_dataforseo_cost()
+            user_ref.update({
+                "dataforseoSpend": gcfirestore.Increment(dataforseo_cost)
+            })
+        except Exception:
+            pass  # Non-critical
+            
     except Exception as e:
         raise HTTPException(
             status_code=500,

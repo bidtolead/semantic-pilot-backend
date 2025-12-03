@@ -131,6 +131,7 @@ def get_all_users(authorization: str | None = Header(default=None)):
         data.setdefault("model", "gpt-4o-mini")
         data.setdefault("totalSpend", 0.0)
         data.setdefault("serperCredits", 0)
+        data.setdefault("dataforseoSpend", 0.0)
         data.setdefault("role", "user")
         
         # Always recalculate totalSpend if tokens exist
