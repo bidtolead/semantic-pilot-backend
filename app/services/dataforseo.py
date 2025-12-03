@@ -187,10 +187,20 @@ def fetch_keyword_ideas(
         resp.raise_for_status()
         data = resp.json()
         
-        # Debug: Log first keyword's raw data to understand the response structure
-        if data.get("tasks") and data["tasks"][0].get("result") and data["tasks"][0]["result"][0].get("items"):
-            sample = data["tasks"][0]["result"][0]["items"][0]
-            logger.info(f"DataForSEO Step 1 sample: {sample.get('keyword')} - volume: {sample.get('search_volume')}")
+        # Debug: Log the full response to see what DataForSEO actually returns
+        logger.info(f"DataForSEO Step 1 response status: {data.get('status_code')}")
+        logger.info(f"DataForSEO Step 1 response message: {data.get('status_message')}")
+        logger.info(f"DataForSEO Step 1 tasks count: {len(data.get('tasks', []))}")
+        
+        if data.get("tasks") and len(data["tasks"]) > 0:
+            task = data["tasks"][0]
+            logger.info(f"DataForSEO Step 1 task status: {task.get('status_code')} - {task.get('status_message')}")
+            logger.info(f"DataForSEO Step 1 task result count: {len(task.get('result', []))}")
+            
+            if task.get("result") and len(task["result"]) > 0:
+                result = task["result"][0]
+                logger.info(f"DataForSEO Step 1 result keys: {list(result.keys())}")
+                logger.info(f"DataForSEO Step 1 items count: {len(result.get('items', []))}")
             
     except requests.exceptions.HTTPError as e:
         logger.error(f"DataForSEO Step 1 HTTP error: {e.response.status_code} - {e.response.text[:500]}")
