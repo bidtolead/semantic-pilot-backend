@@ -18,7 +18,7 @@ def clean_location_name(location: str) -> str:
     
     Examples:
         "Auckland (City · NZ)" -> "Auckland,New Zealand"
-        "Auckland (City - NZ)" -> "Auckland,New Zealand"
+        "Auckland, New Zealand (City · NZ)" -> "Auckland,New Zealand"  
         "New Zealand (Country · NZ)" -> "New Zealand"
         "United States" -> "United States"
     
@@ -50,7 +50,7 @@ def clean_location_name(location: str) -> str:
     }
     
     # Extract location name and country code
-    # Format: "Auckland (City · NZ)" or "Auckland (City - NZ)"
+    # Format: "Auckland (City · NZ)" or "Auckland, New Zealand (City - NZ)"
     if "(" in location:
         parts = location.split("(")
         location_name = parts[0].strip()
@@ -70,6 +70,11 @@ def clean_location_name(location: str) -> str:
             country_full = country_map.get(country_code.upper())
             
             if country_full:
+                # Check if location_name already contains the country
+                if country_full.lower() in location_name.lower():
+                    # Already has country in it, just return the cleaned location_name
+                    return location_name
+                
                 # Check if location_name is the same as country
                 if location_name.lower() == country_full.lower():
                     # Just return country name
