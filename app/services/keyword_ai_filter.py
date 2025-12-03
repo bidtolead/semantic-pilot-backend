@@ -263,7 +263,9 @@ def run_keyword_ai_filter(
             
             # Keyword exists in raw data - merge all metrics
             print(f"✅ MATCH for '{keyword_text}'")
-            print(f"   AI gave: {kw.get('search_volume')} → Using DataForSEO: {raw_data.get('avg_monthly_searches')}")
+            print(f"   AI gave: {kw.get('search_volume')} → Using DataForSEO avg_monthly_searches: {raw_data.get('avg_monthly_searches')}")
+            print(f"   DataForSEO raw data keys: {list(raw_data.keys())}")
+            print(f"   Full DataForSEO data for this keyword: {raw_data}")
             
             # Replace ALL fields with actual DataForSEO data
             # Use "-" for missing values instead of None for clean UI display

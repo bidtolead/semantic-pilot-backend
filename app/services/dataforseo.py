@@ -287,6 +287,21 @@ def fetch_keyword_ideas(
     # Build output with full metrics from search_volume
     # CRITICAL: Only use exact values from DataForSEO, never make up numbers
     out: List[Dict] = []
+    
+    # DEBUG: Log first few items from DataForSEO response
+    print(f"\n🔍 DataForSEO Step 2 - First 3 keywords with metrics:")
+    for idx, it in enumerate(volume_items[:3]):
+        print(f"  [{idx}] keyword: {it.get('keyword')}")
+        print(f"      search_volume: {it.get('search_volume')}")
+        print(f"      competition: {it.get('competition')}")
+        print(f"      competition_index: {it.get('competition_index')}")
+        print(f"      low_bid: {it.get('low_top_of_page_bid')}")
+        print(f"      high_bid: {it.get('high_top_of_page_bid')}")
+        monthly = it.get("monthly_searches", [])
+        print(f"      monthly_searches count: {len(monthly)}")
+        if monthly:
+            print(f"      latest month volume: {monthly[0].get('search_volume')}")
+    
     for it in volume_items:
         kw = it.get("keyword")
         sv = it.get("search_volume")  # May be None

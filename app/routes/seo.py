@@ -327,16 +327,31 @@ async def run_keyword_research(
         print(f"Secondary: {len(structured.get('secondary_keywords', []))}")
         print(f"Long-tail: {len(structured.get('long_tail_keywords', []))}")
         
+        # Log first 3 keywords from raw_output to see DataForSEO data
+        print(f"\n=== FIRST 3 RAW KEYWORDS FROM DATAFORSEO ===")
+        for idx, raw_kw in enumerate(raw_output[:3]):
+            print(f"[{idx}] {raw_kw.get('keyword')}: avg_monthly_searches={raw_kw.get('avg_monthly_searches')}, competition={raw_kw.get('competition')}")
+        
         # Log first primary keyword with all fields
         if structured.get("primary_keywords"):
             pk = structured["primary_keywords"][0]
-            print(f"\nFirst primary keyword: {pk.get('keyword')}")
-            print(f"  search_volume: {pk.get('search_volume')}")
+            print(f"\n=== FIRST PRIMARY KEYWORD (FINAL FOR FIRESTORE) ===")
+            print(f"  keyword: {pk.get('keyword')}")
+            print(f"  search_volume: {pk.get('search_volume')} (type: {type(pk.get('search_volume'))})")
             print(f"  competition: {pk.get('competition')}")
             print(f"  competition_index: {pk.get('competition_index')}")
             print(f"  low_bid: {pk.get('low_top_of_page_bid_micros')}")
             print(f"  high_bid: {pk.get('high_top_of_page_bid_micros')}")
             print(f"  trend_yoy: {pk.get('trend_yoy')}")
+            print(f"  Full object: {pk}")
+        
+        # Log first secondary keyword
+        if structured.get("secondary_keywords"):
+            sk = structured["secondary_keywords"][0]
+            print(f"\n=== FIRST SECONDARY KEYWORD ===")
+            print(f"  keyword: {sk.get('keyword')}")
+            print(f"  search_volume: {sk.get('search_volume')} (type: {type(sk.get('search_volume'))})")
+        
         
         keyword_research_ref = (
             db.collection("intakes")
