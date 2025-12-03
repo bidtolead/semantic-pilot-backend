@@ -208,11 +208,18 @@ def fetch_keyword_ideas(
     result = tasks[0]["result"][0]
     items = result.get("items", [])[:200]  # Limit to top 200 keywords
     
+    # Debug: Log what we got
+    logger.info(f"DataForSEO Step 1 returned {len(items)} items")
+    if items:
+        logger.info(f"First item structure: {list(items[0].keys())}")
+        logger.info(f"First item sample: keyword={items[0].get('keyword')}, search_volume={items[0].get('search_volume')}")
+    
     # Extract just the keyword strings for Step 2
     keyword_list = [it.get("keyword") for it in items if it.get("keyword")]
     
     if not keyword_list:
         logger.warning(f"DataForSEO Step 1 returned items but no valid keywords for location={location_name}")
+        logger.warning(f"Sample item (if exists): {items[0] if items else 'No items'}")
         return []
     
     # STEP 2: Get full metrics (competition, bids, YoY) using search_volume endpoint
