@@ -182,8 +182,8 @@ def fetch_keyword_ideas(
     if url:
         payload[0]["url"] = url
     
-    # Debug: Log the exact payload being sent
-    logger.info(f"DataForSEO Step 1 payload: {payload}")
+    # Debug: Log the exact payload being sent (using print to ensure it appears)
+    print(f"🔍 DataForSEO Step 1 payload: {payload}", flush=True)
     
     try:
         resp = requests.post(url_endpoint, json=payload, headers=_auth_header(), timeout=120)
@@ -191,19 +191,19 @@ def fetch_keyword_ideas(
         data = resp.json()
         
         # Debug: Log the full response to see what DataForSEO actually returns
-        logger.info(f"DataForSEO Step 1 response status: {data.get('status_code')}")
-        logger.info(f"DataForSEO Step 1 response message: {data.get('status_message')}")
-        logger.info(f"DataForSEO Step 1 tasks count: {len(data.get('tasks', []))}")
+        print(f"🔍 DataForSEO Step 1 response status: {data.get('status_code')}", flush=True)
+        print(f"🔍 DataForSEO Step 1 response message: {data.get('status_message')}", flush=True)
+        print(f"🔍 DataForSEO Step 1 tasks count: {len(data.get('tasks', []))}", flush=True)
         
         if data.get("tasks") and len(data["tasks"]) > 0:
             task = data["tasks"][0]
-            logger.info(f"DataForSEO Step 1 task status: {task.get('status_code')} - {task.get('status_message')}")
-            logger.info(f"DataForSEO Step 1 task result count: {len(task.get('result', []))}")
+            print(f"🔍 DataForSEO Step 1 task status: {task.get('status_code')} - {task.get('status_message')}", flush=True)
+            print(f"🔍 DataForSEO Step 1 task result count: {len(task.get('result', []))}", flush=True)
             
             if task.get("result") and len(task["result"]) > 0:
                 result = task["result"][0]
-                logger.info(f"DataForSEO Step 1 result keys: {list(result.keys())}")
-                logger.info(f"DataForSEO Step 1 items count: {len(result.get('items', []))}")
+                print(f"🔍 DataForSEO Step 1 result keys: {list(result.keys())}", flush=True)
+                print(f"🔍 DataForSEO Step 1 items count: {len(result.get('items', []))}", flush=True)
             
     except requests.exceptions.HTTPError as e:
         logger.error(f"DataForSEO Step 1 HTTP error: {e.response.status_code} - {e.response.text[:500]}")
