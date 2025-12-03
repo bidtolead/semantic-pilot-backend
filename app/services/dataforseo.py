@@ -165,16 +165,15 @@ def fetch_keyword_ideas(
         logger.warning("fetch_keyword_ideas called with empty seed_keywords")
         return []
     
-    # Clean location name (remove parentheses and metadata)
-    location_name = clean_location_name(location_name)
-    logger.info(f"DataForSEO request: seeds={seed_keywords[:3]}..., location={location_name}")
+    # location_name is now the location ID from geo.py (e.g., "1001330" for Auckland)
+    logger.info(f"DataForSEO request: seeds={seed_keywords[:3]}..., location_code={location_name}")
 
     # STEP 1: Get keyword suggestions (up to 20k keywords)
     url_endpoint = f"{API_BASE}/keywords_data/google_ads/keywords_for_keywords/live"
     
     payload = [{
         "keywords": seed_keywords,
-        "location_name": location_name,
+        "location_code": int(location_name),  # DataForSEO requires numeric location code
         "language_name": language_name,
         "search_partners": False,  # Exclude search partners to match Google Ads Keyword Planner
     }]
@@ -206,6 +205,11 @@ def fetch_keyword_ideas(
         return []
     
     result = tasks[0]["result"][0]
+    
+    # Debug: Log the full result structure to understand what fields exist
+    logger.info(f"DataForSEO Step 1 result keys: {list(result.keys())}")
+    logger.info(f"DataForSEO Step 1 full result: {result}")
+    
     items = result.get("items", [])[:200]  # Limit to top 200 keywords
     
     # Debug: Log what we got
@@ -218,7 +222,7 @@ def fetch_keyword_ideas(
     keyword_list = [it.get("keyword") for it in items if it.get("keyword")]
     
     if not keyword_list:
-        logger.warning(f"DataForSEO Step 1 returned items but no valid keywords for location={location_name}")
+        logger.warning(f"DataForSEO Step 1 returned items but no valid keywords for location_code={location_name}")
         logger.warning(f"Sample item (if exists): {items[0] if items else 'No items'}")
         return []
     
@@ -226,7 +230,7 @@ def fetch_keyword_ideas(
     volume_endpoint = f"{API_BASE}/keywords_data/google_ads/search_volume/live"
     volume_payload = [{
         "keywords": keyword_list,  # Pass the 200 keywords we got from step 1
-        "location_name": location_name,
+        "location_code": int(location_name),  # DataForSEO requires numeric location code
         "language_name": language_name,
         "search_partners": False,
     }]
