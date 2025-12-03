@@ -203,6 +203,15 @@ def run_keyword_ai_filter(
         snippet = content[:300]
         raise ValueError(f"Invalid JSON from model: {e}: {snippet}")
 
+    # Debug: Log the raw AI response
+    print(f"\n=== RAW AI RESPONSE ===")
+    print(f"AI JSON keys: {list(result_json.keys())}")
+    print(f"Primary count from AI: {len(result_json.get('primary_keywords', []))}")
+    print(f"Secondary count from AI: {len(result_json.get('secondary_keywords', []))}")
+    print(f"Long-tail count from AI: {len(result_json.get('long_tail_keywords', []))}")
+    if result_json.get('primary_keywords'):
+        print(f"Sample primary: {result_json['primary_keywords'][0]}")
+    
     # Validate and correct search_volume values against raw data
     # Also merge in all Google Ads metrics (competition, bid data, etc.)
     # CRITICAL: Use the same limited_keywords that we sent to the AI, not all raw_output
