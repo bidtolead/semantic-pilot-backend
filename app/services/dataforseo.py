@@ -76,17 +76,22 @@ def clean_location_name(location: str) -> str:
                 # Check if location_name already contains the country
                 if country_full.lower() in location_name.lower():
                     # Already has country in it, just return the cleaned location_name
+                    logger.debug(f"clean_location_name output: '{location_name}' (country already in name)")
                     return location_name
                 
                 # Check if location_name is the same as country
                 if location_name.lower() == country_full.lower():
                     # Just return country name
+                    logger.debug(f"clean_location_name output: '{country_full}' (country only)")
                     return country_full
                 else:
                     # Return "City,Country" format for DataForSEO
-                    return f"{location_name},{country_full}"
+                    result = f"{location_name},{country_full}"
+                    logger.debug(f"clean_location_name output: '{result}' (city,country)")
+                    return result
     
     # No parentheses - return as-is
+    logger.debug(f"clean_location_name output: '{location}' (no changes)")
     return location
 
 
