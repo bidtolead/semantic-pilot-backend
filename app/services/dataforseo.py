@@ -221,6 +221,8 @@ def fetch_keyword_ideas(
         "search_partners": False,
     }]
     
+    print(f"🔍 Step 2 payload: keywords={len(keyword_list)}, location_code={int(location_name)}, language={language_name}", flush=True)
+    
     try:
         volume_resp = requests.post(volume_endpoint, json=volume_payload, headers=_auth_header(), timeout=120)
         volume_resp.raise_for_status()
@@ -231,8 +233,12 @@ def fetch_keyword_ideas(
         print(f"🔍 Step 2 tasks count: {len(volume_data.get('tasks', []))}", flush=True)
         if volume_data.get("tasks") and len(volume_data["tasks"]) > 0:
             task = volume_data["tasks"][0]
-            print(f"🔍 Step 2 task status: {task.get('status_code')}", flush=True)
-            print(f"🔍 Step 2 result count: {len(task.get('result', []))}", flush=True)
+            print(f"🔍 Step 2 task status: {task.get('status_code')} - {task.get('status_message')}", flush=True)
+            result = task.get('result')
+            if result:
+                print(f"🔍 Step 2 result count: {len(result)}", flush=True)
+            else:
+                print(f"🔍 Step 2 result is None (error)", flush=True)
             
         logger.info(f"DataForSEO Step 2 completed: processed {len(keyword_list)} keywords")
     except requests.exceptions.HTTPError as e:
@@ -243,13 +249,18 @@ def fetch_keyword_ideas(
         raise RuntimeError(f"DataForSEO search_volume API failed: {e}")
     
     volume_tasks = volume_data.get("tasks", [])
-    if not volume_tasks or not volume_tasks[0].get("result"):
-        logger.warning(f"DataForSEO Step 2 returned no results")
+    if not volume_tasks:
+        logger.warning(f"DataForSEO Step 2 returned no tasks")
+        return []
+    
+    volume_result = volume_tasks[0].get("result")
+    if not volume_result:
+        logger.warning(f"DataForSEO Step 2 task has no result")
         return []
     
     # IMPORTANT: result is already an array of keyword items, not a wrapper object with "items"
-    volume_items = volume_tasks[0]["result"]
-    if not volume_items:
+    volume_items = volume_result
+    if not isinstance(volume_items, list) or len(volume_items) == 0:
         logger.warning(f"DataForSEO Step 2 returned no items")
         return []
     
