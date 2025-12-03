@@ -182,6 +182,9 @@ def fetch_keyword_ideas(
     if url:
         payload[0]["url"] = url
     
+    # Debug: Log the exact payload being sent
+    logger.info(f"DataForSEO Step 1 payload: {payload}")
+    
     try:
         resp = requests.post(url_endpoint, json=payload, headers=_auth_header(), timeout=120)
         resp.raise_for_status()
