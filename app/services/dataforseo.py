@@ -31,6 +31,9 @@ def clean_location_name(location: str) -> str:
     if not location:
         return location
     
+    original_location = location
+    logger.debug(f"clean_location_name input: '{original_location}'")
+    
     # Map of country codes to full country names
     country_map = {
         "NZ": "New Zealand",
