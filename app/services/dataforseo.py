@@ -182,28 +182,10 @@ def fetch_keyword_ideas(
     if url:
         payload[0]["url"] = url
     
-    # Debug: Log the exact payload being sent (using print to ensure it appears)
-    print(f"🔍 DataForSEO Step 1 payload: {payload}", flush=True)
-    
     try:
         resp = requests.post(url_endpoint, json=payload, headers=_auth_header(), timeout=120)
         resp.raise_for_status()
         data = resp.json()
-        
-        # Debug: Log the full response to see what DataForSEO actually returns
-        print(f"🔍 DataForSEO Step 1 response status: {data.get('status_code')}", flush=True)
-        print(f"🔍 DataForSEO Step 1 response message: {data.get('status_message')}", flush=True)
-        print(f"🔍 DataForSEO Step 1 tasks count: {len(data.get('tasks', []))}", flush=True)
-        
-        if data.get("tasks") and len(data["tasks"]) > 0:
-            task = data["tasks"][0]
-            print(f"🔍 DataForSEO Step 1 task status: {task.get('status_code')} - {task.get('status_message')}", flush=True)
-            print(f"🔍 DataForSEO Step 1 task result count: {len(task.get('result', []))}", flush=True)
-            
-            if task.get("result") and len(task["result"]) > 0:
-                result = task["result"][0]
-                print(f"🔍 DataForSEO Step 1 result keys: {list(result.keys())}", flush=True)
-                print(f"🔍 DataForSEO Step 1 items count: {len(result.get('items', []))}", flush=True)
             
     except requests.exceptions.HTTPError as e:
         logger.error(f"DataForSEO Step 1 HTTP error: {e.response.status_code} - {e.response.text[:500]}")
@@ -214,22 +196,13 @@ def fetch_keyword_ideas(
     
     tasks = data.get("tasks", [])
     if not tasks or not tasks[0].get("result"):
-        logger.warning(f"DataForSEO Step 1 returned no results for location={location_name}")
+        logger.warning(f"DataForSEO Step 1 returned no results for location_code={location_name}")
         return []
     
-    result = tasks[0]["result"][0]
+    # IMPORTANT: result is already an array of keyword items, not a wrapper object with "items"
+    items = tasks[0]["result"][:200]  # Limit to top 200 keywords
     
-    # Debug: Log the full result structure to understand what fields exist
-    logger.info(f"DataForSEO Step 1 result keys: {list(result.keys())}")
-    logger.info(f"DataForSEO Step 1 full result: {result}")
-    
-    items = result.get("items", [])[:200]  # Limit to top 200 keywords
-    
-    # Debug: Log what we got
-    logger.info(f"DataForSEO Step 1 returned {len(items)} items")
-    if items:
-        logger.info(f"First item structure: {list(items[0].keys())}")
-        logger.info(f"First item sample: keyword={items[0].get('keyword')}, search_volume={items[0].get('search_volume')}")
+    logger.info(f"DataForSEO Step 1 returned {len(items)} keywords for location_code={location_name}")
     
     # Extract just the keyword strings for Step 2
     keyword_list = [it.get("keyword") for it in items if it.get("keyword")]
