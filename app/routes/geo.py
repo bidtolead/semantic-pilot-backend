@@ -35,7 +35,7 @@ HARDCODED_LOCATIONS = [
     {"id": "2036", "name": "Australia", "countryCode": "AU", "targetType": "Country"},
     
     # New Zealand
-    {"id": "1001330", "name": "Auckland, New Zealand", "countryCode": "NZ", "targetType": "City"},
+    {"id": "1011036", "name": "Auckland, New Zealand", "countryCode": "NZ", "targetType": "City"},
     {"id": "1001460", "name": "Wellington, New Zealand", "countryCode": "NZ", "targetType": "City"},
     {"id": "2554", "name": "New Zealand", "countryCode": "NZ", "targetType": "Country"},
 ]
