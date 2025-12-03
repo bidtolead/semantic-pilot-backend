@@ -205,15 +205,27 @@ def run_keyword_ai_filter(
 
     # Validate and correct search_volume values against raw data
     # Also merge in all Google Ads metrics (competition, bid data, etc.)
+    # CRITICAL: Use the same limited_keywords that we sent to the AI, not all raw_output
     raw_keyword_map = {
         item.get("keyword", "").lower().strip(): item
-        for item in raw_output
+        for item in limited_keywords
         if isinstance(item, dict)
     }
     
     print(f"\n=== KEYWORD VALIDATION DEBUG ===")
     print(f"Raw keyword map has {len(raw_keyword_map)} keywords")
     print(f"Sample raw keywords: {list(raw_keyword_map.keys())[:5]}")
+    
+    # Debug: Show what AI returned
+    ai_primary = result_json.get("primary_keywords", [])
+    ai_secondary = result_json.get("secondary_keywords", [])
+    ai_longtail = result_json.get("long_tail_keywords", [])
+    print(f"\n=== AI RETURNED ===")
+    print(f"Primary: {len(ai_primary)} keywords")
+    print(f"Secondary: {len(ai_secondary)} keywords")
+    print(f"Long-tail: {len(ai_longtail)} keywords")
+    if ai_primary:
+        print(f"First primary keyword from AI: '{ai_primary[0].get('keyword')}'")
     
     def validate_and_fix_search_volumes(keywords_list):
         """Ensure search_volume matches avg_monthly_searches from raw data and merge Google Ads metrics.
