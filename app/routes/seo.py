@@ -226,11 +226,7 @@ async def run_keyword_research(
             detail="target_location is missing in intake data"
         )
     
-    # Clean location string - remove parentheses and extra info
-    # Example: "Auckland (City - NZ)" -> "Auckland"
-    if "(" in target_location:
-        target_location = target_location.split("(")[0].strip()
-    
+    # Location cleaning is now handled inside dataforseo.fetch_keyword_ideas()
     # Call geo suggest service to find matching GEO_ID
     geo_id = None
     # DataForSEO flow: no geo_id required, use location_name directly

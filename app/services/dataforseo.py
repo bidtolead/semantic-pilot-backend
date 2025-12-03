@@ -2,12 +2,39 @@ import os
 import time
 import base64
 import requests
+import logging
 from typing import List, Dict, Optional
 
+# Configure logging
+logger = logging.getLogger(__name__)
 
 # Ensure API_BASE is clean (strip any trailing slash or typos)
 _raw_base = os.getenv("DATAFORSEO_API_BASE", "https://api.dataforseo.com/v3")
 API_BASE = _raw_base.rstrip("/").replace("v3)", "v3")  # Fix common typo
+
+
+def clean_location_name(location: str) -> str:
+    """Clean location string by removing parentheses and extra metadata.
+    
+    Examples:
+        "Auckland (City · NZ)" -> "Auckland"
+        "Auckland (City - NZ)" -> "Auckland"
+        "New Zealand" -> "New Zealand"
+    
+    Args:
+        location: Raw location string from frontend
+    
+    Returns:
+        Cleaned location name for DataForSEO API
+    """
+    if not location:
+        return location
+    
+    # Remove everything after opening parenthesis
+    if "(" in location:
+        location = location.split("(")[0].strip()
+    
+    return location
 
 
 def _auth_header() -> dict:
@@ -37,7 +64,6 @@ def post_keywords_for_seed_task(
         payload[0]["url"] = url
     
     resp = requests.post(url_endpoint, json=payload, headers=_auth_header(), timeout=30)
-    resp.raise_for_status()
     resp.raise_for_status()
     data = resp.json()
     tasks = (data or {}).get("tasks", [])
@@ -77,7 +103,12 @@ def fetch_keyword_ideas(
         url: Optional URL to analyze for keyword suggestions
     """
     if not seed_keywords:
+        logger.warning("fetch_keyword_ideas called with empty seed_keywords")
         return []
+    
+    # Clean location name (remove parentheses and metadata)
+    location_name = clean_location_name(location_name)
+    logger.info(f"DataForSEO request: seeds={seed_keywords[:3]}..., location={location_name}")
 
     # STEP 1: Get keyword suggestions (up to 20k keywords)
     url_endpoint = f"{API_BASE}/keywords_data/google_ads/keywords_for_keywords/live"
@@ -101,19 +132,18 @@ def fetch_keyword_ideas(
         # Debug: Log first keyword's raw data to understand the response structure
         if data.get("tasks") and data["tasks"][0].get("result") and data["tasks"][0]["result"][0].get("items"):
             sample = data["tasks"][0]["result"][0]["items"][0]
-            print(f"DEBUG DataForSEO sample keyword: {sample.get('keyword')}")
-            print(f"  search_volume: {sample.get('search_volume')}")
-            print(f"  competition: {sample.get('competition')}")
-            print(f"  competition_index: {sample.get('competition_index')}")
-            print(f"  low_top_of_page_bid: {sample.get('low_top_of_page_bid')}")
-            print(f"  high_top_of_page_bid: {sample.get('high_top_of_page_bid')}")
-            print(f"  monthly_searches (first 3): {sample.get('monthly_searches', [])[:3]}")
+            logger.info(f"DataForSEO Step 1 sample: {sample.get('keyword')} - volume: {sample.get('search_volume')}")
             
+    except requests.exceptions.HTTPError as e:
+        logger.error(f"DataForSEO Step 1 HTTP error: {e.response.status_code} - {e.response.text[:500]}")
+        raise RuntimeError(f"DataForSEO Live API failed: HTTP {e.response.status_code}")
     except Exception as e:
+        logger.error(f"DataForSEO Step 1 failed: {str(e)}", exc_info=True)
         raise RuntimeError(f"DataForSEO Live API failed: {e}")
     
     tasks = data.get("tasks", [])
     if not tasks or not tasks[0].get("result"):
+        logger.warning(f"DataForSEO Step 1 returned no results for location={location_name}")
         return []
     
     result = tasks[0]["result"][0]
@@ -123,6 +153,7 @@ def fetch_keyword_ideas(
     keyword_list = [it.get("keyword") for it in items if it.get("keyword")]
     
     if not keyword_list:
+        logger.warning(f"DataForSEO Step 1 returned items but no valid keywords for location={location_name}")
         return []
     
     # STEP 2: Get full metrics (competition, bids, YoY) using search_volume endpoint
@@ -138,62 +169,63 @@ def fetch_keyword_ideas(
         volume_resp = requests.post(volume_endpoint, json=volume_payload, headers=_auth_header(), timeout=120)
         volume_resp.raise_for_status()
         volume_data = volume_resp.json()
+        logger.info(f"DataForSEO Step 2 completed: processed {len(keyword_list)} keywords")
+    except requests.exceptions.HTTPError as e:
+        logger.error(f"DataForSEO Step 2 HTTP error: {e.response.status_code} - {e.response.text[:500]}")
+        raise RuntimeError(f"DataForSEO search_volume API failed: HTTP {e.response.status_code}")
     except Exception as e:
+        logger.error(f"DataForSEO Step 2 failed: {str(e)}", exc_info=True)
         raise RuntimeError(f"DataForSEO search_volume API failed: {e}")
     
     volume_tasks = volume_data.get("tasks", [])
     if not volume_tasks or not volume_tasks[0].get("result"):
+        logger.warning(f"DataForSEO Step 2 returned no results")
         return []
     
     volume_items = volume_tasks[0]["result"][0].get("items", [])
+    if not volume_items:
+        logger.warning(f"DataForSEO Step 2 returned no items")
+        return []
     
     # Build output with full metrics from search_volume
+    # CRITICAL: Only use exact values from DataForSEO, never make up numbers
     out: List[Dict] = []
     for it in volume_items:
         kw = it.get("keyword")
-        sv = it.get("search_volume")
-        comp_index = it.get("competition_index")
-        comp_str = it.get("competition")
-        low_bid = it.get("low_top_of_page_bid")
-        high_bid = it.get("high_top_of_page_bid")
+        sv = it.get("search_volume")  # May be None
+        comp_index = it.get("competition_index")  # May be None
+        comp_str = it.get("competition")  # May be None
+        low_bid = it.get("low_top_of_page_bid")  # May be None
+        high_bid = it.get("high_top_of_page_bid")  # May be None
         monthly_searches = it.get("monthly_searches", [])
 
-        # Convert bids from dollars to micros
+        # Convert bids from dollars to micros ONLY if value exists
         low_micros = int(round(low_bid * 1_000_000)) if low_bid is not None else None
         high_micros = int(round(high_bid * 1_000_000)) if high_bid is not None else None
 
-        # Calculate YoY change from monthly_searches array
-        # DataForSEO returns monthly_searches sorted newest-to-oldest
-        # Index 0 = most recent month, Index 11 = same month last year
+        # Calculate YoY change from monthly_searches array ONLY if data exists
         yoy_change = None
         if monthly_searches and len(monthly_searches) >= 12:
             try:
-                # Debug: Log the months to verify order
-                print(f"DEBUG YoY for '{kw}':")
-                print(f"  monthly_searches[0] (recent): {monthly_searches[0]}")
-                print(f"  monthly_searches[11] (1yr ago): {monthly_searches[11]}")
-                
                 current_month = monthly_searches[0].get("search_volume")
                 year_ago_month = monthly_searches[11].get("search_volume")
-                
                 if current_month is not None and year_ago_month is not None and year_ago_month > 0:
                     yoy_change = round(((current_month - year_ago_month) / year_ago_month) * 100, 1)
-                    print(f"  Calculated YoY: {yoy_change}%")
-            except (IndexError, KeyError, ZeroDivisionError) as e:
-                print(f"  YoY calculation error: {e}")
+            except (IndexError, KeyError, ZeroDivisionError):
                 pass
 
         out.append({
             "keyword": kw,
-            "avg_monthly_searches": sv,
-            "competition": comp_str,
-            "competition_index": comp_index,
-            "low_top_of_page_bid_micros": low_micros,
-            "high_top_of_page_bid_micros": high_micros,
-            "yoy_change": yoy_change,
-            "monthly_searches": monthly_searches,
+            "avg_monthly_searches": sv,  # None if DataForSEO didn't provide
+            "competition": comp_str,  # None if DataForSEO didn't provide
+            "competition_index": comp_index,  # None if DataForSEO didn't provide
+            "low_top_of_page_bid_micros": low_micros,  # None if DataForSEO didn't provide
+            "high_top_of_page_bid_micros": high_micros,  # None if DataForSEO didn't provide
+            "yoy_change": yoy_change,  # None if not enough data
+            "monthly_searches": monthly_searches,  # Empty array if no data
         })
 
+    logger.info(f"DataForSEO completed: returned {len(out)} keywords with metrics")
     return out
 
 

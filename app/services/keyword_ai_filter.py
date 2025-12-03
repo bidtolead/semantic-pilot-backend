@@ -220,6 +220,8 @@ def run_keyword_ai_filter(
         
         CRITICAL: Only include keywords that exist in the raw DataForSEO data.
         If AI generates a keyword not in raw data, SKIP IT entirely.
+        Use EXACT metrics from DataForSEO - never make up numbers.
+        Use "-" for missing values instead of None to display cleanly in UI.
         """
         if not isinstance(keywords_list, list):
             return keywords_list
@@ -243,20 +245,21 @@ def run_keyword_ai_filter(
             print(f"   AI gave: {kw.get('search_volume')} → Using DataForSEO: {raw_data.get('avg_monthly_searches')}")
             
             # Replace ALL fields with actual DataForSEO data
-            kw["search_volume"] = raw_data.get("avg_monthly_searches")
-            kw["competition"] = raw_data.get("competition")
-            kw["competition_index"] = raw_data.get("competition_index")
-            kw["low_top_of_page_bid_micros"] = raw_data.get("low_top_of_page_bid_micros")
-            kw["high_top_of_page_bid_micros"] = raw_data.get("high_top_of_page_bid_micros")
+            # Use "-" for missing values instead of None for clean UI display
+            kw["search_volume"] = raw_data.get("avg_monthly_searches") if raw_data.get("avg_monthly_searches") is not None else "-"
+            kw["competition"] = raw_data.get("competition") if raw_data.get("competition") is not None else "-"
+            kw["competition_index"] = raw_data.get("competition_index") if raw_data.get("competition_index") is not None else "-"
+            kw["low_top_of_page_bid_micros"] = raw_data.get("low_top_of_page_bid_micros") if raw_data.get("low_top_of_page_bid_micros") is not None else "-"
+            kw["high_top_of_page_bid_micros"] = raw_data.get("high_top_of_page_bid_micros") if raw_data.get("high_top_of_page_bid_micros") is not None else "-"
             
             # Add YoY trend data
             yoy = raw_data.get("yoy_change")
             if yoy is not None:
                 kw["trend_yoy"] = f"{'+' if yoy > 0 else ''}{yoy}%"
             else:
-                kw["trend_yoy"] = "N/A"
+                kw["trend_yoy"] = "-"
             
-            # Add monthly searches data
+            # Add monthly searches data (preserve empty array if no data)
             kw["monthly_searches"] = raw_data.get("monthly_searches", [])
             
             fixed_keywords.append(kw)
