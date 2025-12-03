@@ -165,14 +165,30 @@ def fetch_keyword_ideas(
         logger.warning("fetch_keyword_ideas called with empty seed_keywords")
         return []
     
+    # Clean seed keywords: remove trailing periods, extra spaces, and invalid characters
+    # Google Ads doesn't allow certain symbols at the end of keywords
+    cleaned_seeds = []
+    for kw in seed_keywords:
+        if kw:
+            # Strip whitespace and trailing periods/commas
+            cleaned = kw.strip().rstrip('.,;:!?')
+            # Remove extra whitespace
+            cleaned = ' '.join(cleaned.split())
+            if cleaned:
+                cleaned_seeds.append(cleaned)
+    
+    if not cleaned_seeds:
+        logger.warning("All seed keywords were empty after cleaning")
+        return []
+    
     # location_name is now the location ID from geo.py (e.g., "1001330" for Auckland)
-    logger.info(f"DataForSEO request: seeds={seed_keywords[:3]}..., location_code={location_name}")
+    logger.info(f"DataForSEO request: seeds={cleaned_seeds[:3]}..., location_code={location_name}")
 
     # STEP 1: Get keyword suggestions (up to 20k keywords)
     url_endpoint = f"{API_BASE}/keywords_data/google_ads/keywords_for_keywords/live"
     
     payload = [{
-        "keywords": seed_keywords,
+        "keywords": cleaned_seeds,
         "location_code": int(location_name),  # DataForSEO requires numeric location code
         "language_name": language_name,
         "search_partners": False,  # Exclude search partners to match Google Ads Keyword Planner
