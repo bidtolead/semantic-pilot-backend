@@ -14,12 +14,13 @@ API_BASE = _raw_base.rstrip("/").replace("v3)", "v3")  # Fix common typo
 
 
 def clean_location_name(location: str) -> str:
-    """Clean location string by removing parentheses and extra metadata.
+    """Clean location string and convert to DataForSEO format.
     
     Examples:
-        "Auckland (City · NZ)" -> "Auckland"
-        "Auckland (City - NZ)" -> "Auckland"
-        "New Zealand" -> "New Zealand"
+        "Auckland (City · NZ)" -> "Auckland,New Zealand"
+        "Auckland (City - NZ)" -> "Auckland,New Zealand"
+        "New Zealand (Country · NZ)" -> "New Zealand"
+        "United States" -> "United States"
     
     Args:
         location: Raw location string from frontend
@@ -30,10 +31,54 @@ def clean_location_name(location: str) -> str:
     if not location:
         return location
     
-    # Remove everything after opening parenthesis
-    if "(" in location:
-        location = location.split("(")[0].strip()
+    # Map of country codes to full country names
+    country_map = {
+        "NZ": "New Zealand",
+        "AU": "Australia", 
+        "US": "United States",
+        "GB": "United Kingdom",
+        "UK": "United Kingdom",
+        "CA": "Canada",
+        "IE": "Ireland",
+        "SG": "Singapore",
+        "AE": "United Arab Emirates",
+        "IL": "Israel",
+        "ZA": "South Africa",
+        "PH": "Philippines",
+        "IN": "India",
+        "NG": "Nigeria",
+    }
     
+    # Extract location name and country code
+    # Format: "Auckland (City · NZ)" or "Auckland (City - NZ)"
+    if "(" in location:
+        parts = location.split("(")
+        location_name = parts[0].strip()
+        
+        # Extract country code from parentheses
+        if len(parts) > 1:
+            metadata = parts[1].rstrip(")")
+            # Extract country code (last part after · or -)
+            if "·" in metadata:
+                country_code = metadata.split("·")[-1].strip()
+            elif "-" in metadata:
+                country_code = metadata.split("-")[-1].strip()
+            else:
+                country_code = metadata.strip()
+            
+            # Convert country code to full name
+            country_full = country_map.get(country_code.upper())
+            
+            if country_full:
+                # Check if location_name is the same as country
+                if location_name.lower() == country_full.lower():
+                    # Just return country name
+                    return country_full
+                else:
+                    # Return "City,Country" format for DataForSEO
+                    return f"{location_name},{country_full}"
+    
+    # No parentheses - return as-is
     return location
 
 
