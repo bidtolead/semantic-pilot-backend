@@ -225,6 +225,15 @@ def fetch_keyword_ideas(
         volume_resp = requests.post(volume_endpoint, json=volume_payload, headers=_auth_header(), timeout=120)
         volume_resp.raise_for_status()
         volume_data = volume_resp.json()
+        
+        # Debug Step 2 response structure
+        print(f"🔍 Step 2 response status: {volume_data.get('status_code')}", flush=True)
+        print(f"🔍 Step 2 tasks count: {len(volume_data.get('tasks', []))}", flush=True)
+        if volume_data.get("tasks") and len(volume_data["tasks"]) > 0:
+            task = volume_data["tasks"][0]
+            print(f"🔍 Step 2 task status: {task.get('status_code')}", flush=True)
+            print(f"🔍 Step 2 result count: {len(task.get('result', []))}", flush=True)
+            
         logger.info(f"DataForSEO Step 2 completed: processed {len(keyword_list)} keywords")
     except requests.exceptions.HTTPError as e:
         logger.error(f"DataForSEO Step 2 HTTP error: {e.response.status_code} - {e.response.text[:500]}")
