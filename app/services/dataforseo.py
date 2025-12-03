@@ -163,14 +163,24 @@ def fetch_keyword_ideas(
         high_micros = int(round(high_bid * 1_000_000)) if high_bid is not None else None
 
         # Calculate YoY change from monthly_searches array
+        # DataForSEO returns monthly_searches sorted newest-to-oldest
+        # Index 0 = most recent month, Index 11 = same month last year
         yoy_change = None
         if monthly_searches and len(monthly_searches) >= 12:
             try:
+                # Debug: Log the months to verify order
+                print(f"DEBUG YoY for '{kw}':")
+                print(f"  monthly_searches[0] (recent): {monthly_searches[0]}")
+                print(f"  monthly_searches[11] (1yr ago): {monthly_searches[11]}")
+                
                 current_month = monthly_searches[0].get("search_volume")
                 year_ago_month = monthly_searches[11].get("search_volume")
+                
                 if current_month is not None and year_ago_month is not None and year_ago_month > 0:
                     yoy_change = round(((current_month - year_ago_month) / year_ago_month) * 100, 1)
-            except (IndexError, KeyError, ZeroDivisionError):
+                    print(f"  Calculated YoY: {yoy_change}%")
+            except (IndexError, KeyError, ZeroDivisionError) as e:
+                print(f"  YoY calculation error: {e}")
                 pass
 
         out.append({
