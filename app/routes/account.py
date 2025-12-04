@@ -29,7 +29,8 @@ def export_research_data(authorization: str | None = Header(default=None)):
         uid = decoded["uid"]
 
         # First, get all research intakes for this user
-        intake_docs = db.collection("research_intakes").where("uid", "==", uid).stream()
+        intake_docs = list(db.collection("research_intakes").where("uid", "==", uid).stream())
+        print(f"🔍 Found {len(intake_docs)} research intakes for user {uid}")
         
         # Collect all keyword results
         rows = []
@@ -38,6 +39,8 @@ def export_research_data(authorization: str | None = Header(default=None)):
         for intake_doc in intake_docs:
             intake_id = intake_doc.id
             intake_data = intake_doc.to_dict() or {}
+            
+            print(f"📋 Processing intake {intake_id}")
             
             business_name = intake_data.get('businessName', '')
             created_at = intake_data.get('createdAt', '')
@@ -48,12 +51,15 @@ def export_research_data(authorization: str | None = Header(default=None)):
             results_snap = results_ref.get()
             
             if not results_snap.exists:
+                print(f"⚠️  No keyword_research_results found for intake {intake_id}")
                 continue
                 
             research_data = results_snap.to_dict() or {}
+            print(f"✅ Found research_data with keys: {list(research_data.keys())}")
             
             # Extract keywords from research_data
             if 'primary' in research_data and isinstance(research_data['primary'], list):
+                print(f"   Primary keywords: {len(research_data['primary'])}")
                 for kw in research_data['primary']:
                     if isinstance(kw, dict):
                         rows.append({
@@ -68,6 +74,7 @@ def export_research_data(authorization: str | None = Header(default=None)):
                         })
             
             if 'secondary' in research_data and isinstance(research_data['secondary'], list):
+                print(f"   Secondary keywords: {len(research_data['secondary'])}")
                 for kw in research_data['secondary']:
                     if isinstance(kw, dict):
                         rows.append({
@@ -80,6 +87,8 @@ def export_research_data(authorization: str | None = Header(default=None)):
                             'competition': kw.get('competition', ''),
                             'cpc': kw.get('cpc', 0),
                         })
+        
+        print(f"📊 Total rows collected: {len(rows)}")
         
         if not rows:
             raise HTTPException(status_code=404, detail="No keyword results found to export")
