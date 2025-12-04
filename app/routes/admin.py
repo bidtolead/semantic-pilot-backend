@@ -41,7 +41,12 @@ def require_admin(authorization: str | None):
                 "firstName": display_name.split()[0] if display_name else None,
                 "role": "user",  # Default to user; admin must manually upgrade
                 "plan": "free",
-                "credits": 100,
+                "credits": 30,  # Monthly credits
+                "monthlyCredits": 30,
+                "dailyCreditsUsed": 0,
+                "dailyLimit": 5,
+                "lastCreditReset": datetime.utcnow().isoformat(),
+                "lastDailyReset": datetime.utcnow().isoformat(),
                 "researchCount": 0,
                 "tokenUsage": 0,
                 "totalSpend": 0.0,

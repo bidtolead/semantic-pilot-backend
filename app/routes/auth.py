@@ -14,7 +14,12 @@ DEFAULT_USER_FIELDS = {
     "firstName": None,
     "role": "user",
     "plan": "free",
-    "credits": 100,
+    "credits": 30,  # Monthly credits (resets each month)
+    "monthlyCredits": 30,  # Max credits per month
+    "dailyCreditsUsed": 0,  # Credits used today
+    "dailyLimit": 5,  # Max credits per day
+    "lastCreditReset": None,  # Last monthly reset date
+    "lastDailyReset": None,  # Last daily reset date
     "researchCount": 0,
     "tokenUsage": 0,
     "totalSpend": 0.0,

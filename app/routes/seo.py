@@ -200,7 +200,12 @@ async def run_keyword_research(
         user_ref.set({
             "researchCount": 0,
             "tokenUsage": 0,
-            "credits": 50,  # Initial credits for new users
+            "credits": 30,  # Monthly credits
+            "monthlyCredits": 30,
+            "dailyCreditsUsed": 0,
+            "dailyLimit": 5,
+            "lastCreditReset": gcfirestore.SERVER_TIMESTAMP,
+            "lastDailyReset": gcfirestore.SERVER_TIMESTAMP,
             "createdAt": gcfirestore.SERVER_TIMESTAMP,
             "lastActivity": gcfirestore.SERVER_TIMESTAMP,
             "online": True,
@@ -209,17 +214,64 @@ async def run_keyword_research(
     
     user_data = user_snapshot.to_dict() or {}
     current_credits = user_data.get("credits", 0)
+    daily_credits_used = user_data.get("dailyCreditsUsed", 0)
+    daily_limit = user_data.get("dailyLimit", 5)
+    monthly_credits = user_data.get("monthlyCredits", 30)
+    last_daily_reset = user_data.get("lastDailyReset")
+    last_credit_reset = user_data.get("lastCreditReset")
     
-    # Check if user has enough credits (1 credit per research)
+    # Check and reset daily credits if needed
+    from datetime import datetime, timezone
+    now = datetime.now(timezone.utc)
+    
+    updates = {}
+    
+    # Reset daily counter if it's a new day
+    if last_daily_reset:
+        if isinstance(last_daily_reset, str):
+            last_daily_reset = datetime.fromisoformat(last_daily_reset.replace('Z', '+00:00'))
+        elif hasattr(last_daily_reset, 'replace'):
+            last_daily_reset = last_daily_reset.replace(tzinfo=timezone.utc)
+        
+        if last_daily_reset.date() < now.date():
+            updates["dailyCreditsUsed"] = 0
+            updates["lastDailyReset"] = now.isoformat()
+            daily_credits_used = 0
+    
+    # Reset monthly credits if it's a new month
+    if last_credit_reset:
+        if isinstance(last_credit_reset, str):
+            last_credit_reset = datetime.fromisoformat(last_credit_reset.replace('Z', '+00:00'))
+        elif hasattr(last_credit_reset, 'replace'):
+            last_credit_reset = last_credit_reset.replace(tzinfo=timezone.utc)
+        
+        if last_credit_reset.month != now.month or last_credit_reset.year != now.year:
+            updates["credits"] = monthly_credits
+            updates["lastCreditReset"] = now.isoformat()
+            current_credits = monthly_credits
+    
+    # Apply resets if any
+    if updates:
+        user_ref.update(updates)
+    
+    # Check daily limit first
+    if daily_credits_used >= daily_limit:
+        raise HTTPException(
+            status_code=429,
+            detail=f"Daily limit reached. You can use up to {daily_limit} credits per day. Resets tomorrow."
+        )
+    
+    # Check if user has enough monthly credits (1 credit per research)
     if current_credits < 1:
         raise HTTPException(
             status_code=402,
-            detail="Insufficient credits. Please contact support to add more credits."
+            detail=f"Insufficient monthly credits. You have {current_credits}/{monthly_credits} credits remaining this month."
         )
     
-    # Deduct 1 credit and increment research count atomically
+    # Deduct 1 credit, increment daily usage, and increment research count atomically
     user_ref.update({
         "credits": gcfirestore.Increment(-1),
+        "dailyCreditsUsed": gcfirestore.Increment(1),
         "researchCount": gcfirestore.Increment(1),
         "lastActivity": gcfirestore.SERVER_TIMESTAMP,
         "online": True,
