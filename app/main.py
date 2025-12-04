@@ -8,6 +8,7 @@ from slowapi.errors import RateLimitExceeded
 from app.routes.intake import router as intake_router
 from app.routes.seo import router as seo_router
 from app.routes.auth import router as auth_router
+from app.routes.account import router as account_router
 from app.routes.firestore import router as firestore_router
 from app.routes.test_db import router as test_db_router
 from app.routes.admin import router as admin_router
@@ -61,6 +62,7 @@ app.add_middleware(
 app.include_router(intake_router)
 app.include_router(seo_router)
 app.include_router(auth_router)
+app.include_router(account_router)
 app.include_router(firestore_router)
 app.include_router(test_db_router)
 

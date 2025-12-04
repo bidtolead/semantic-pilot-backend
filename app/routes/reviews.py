@@ -28,7 +28,12 @@ def check_review_status(authorization: str | None = Header(default=None)):
         return {
             "hasSubmitted": True,
             "approved": review_data.get("approved", False),
-            "rejected": review_data.get("rejected", False)
+            "rejected": review_data.get("rejected", False),
+            "review": {
+                "rating": review_data.get("rating"),
+                "text": review_data.get("text"),
+                "submittedAt": review_data.get("createdAt")
+            }
         }
     return {"hasSubmitted": False, "approved": False, "rejected": False}
 
