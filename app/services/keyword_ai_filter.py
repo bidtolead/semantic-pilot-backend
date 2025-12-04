@@ -98,8 +98,8 @@ def run_keyword_ai_filter(
     prompt_template = _load_prompt_text()
 
     # Limit Google keyword ideas to mitigate TPM rate limits
-    # Start conservatively; we can tune upward later if stable
-    initial_limit = 100
+    # Increased to 500 to give AI more options to choose from
+    initial_limit = 500
     limited_keywords = raw_output[:initial_limit] if isinstance(raw_output, list) else []
 
     # Build prompt with injected JSON blocks
