@@ -26,6 +26,9 @@ DEFAULT_USER_FIELDS = {
     "createdAt": None,
     "lastLoginAt": None,
     "uid": None,
+    # Email preferences
+    "emailNotifications": True,  # System notifications (default: enabled)
+    "marketingEmails": True,  # Marketing emails (default: enabled)
 }
 
 
