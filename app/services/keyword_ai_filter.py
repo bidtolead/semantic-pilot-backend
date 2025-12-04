@@ -165,7 +165,6 @@ def run_keyword_ai_filter(
     except Exception as e:
         # If tiktoken fails, continue with initial limit and let OpenAI handle it
         print(f"Token estimation failed: {e}. Proceeding with {len(limited_keywords)} keywords.")
-    )
 
     # Load model from system settings or use default
     model = "gpt-4o-mini"  # default
