@@ -98,7 +98,7 @@ def run_keyword_ai_filter(
 
     # Limit Google keyword ideas to mitigate TPM rate limits
     # Start conservatively; we can tune upward later if stable
-    initial_limit = 50
+    initial_limit = 100
     limited_keywords = raw_output[:initial_limit] if isinstance(raw_output, list) else []
 
     # Build prompt with injected JSON blocks
@@ -128,6 +128,7 @@ def run_keyword_ai_filter(
     def _call_openai(p: str):
         return get_openai_client().chat.completions.create(
             model=os.getenv("OPENAI_MODEL") or model,
+            temperature=0,  # Deterministic output for repeatable results
             response_format={"type": "json_object"},
             messages=[
                 {

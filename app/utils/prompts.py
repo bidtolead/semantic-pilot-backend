@@ -27,9 +27,11 @@ Return a single valid JSON object with these sections:
 • long_tail_keywords (3–15 depending on word count)
 
 Rules:
-• Prioritise high-volume keywords for primary group
+• Include all highly relevant keywords regardless of search volume
+• Prioritise keywords that match the user's service/product and location
 • Ensure long-tail keywords reflect specific intent and are exact matches from the raw keyword list
 • DO NOT generate keywords not present in the provided keyword list
+• DO NOT exclude keywords just because they have low/zero search volume if they are highly relevant to the service
 
 ---
 
@@ -62,8 +64,8 @@ HARD RULES
 
 • Use only keywords from the uploaded list  
 • Search volume MUST be copied exactly from the "avg_monthly_searches" field - DO NOT modify, round, average, or estimate
-• Exclude all keywords with negative terms or blocked brands  
-• Exclude keywords not matching the funnel stage (mid → no top-of-funnel)  
+• Include ALL relevant keywords that match the user's service/product, even if search volume is low or zero
+• Exclude keywords with negative terms (e.g., "free", "cheap", "scam") or blocked competitor brands  
 • Output must be valid JSON with no markdown or extra text  
 
 ---
