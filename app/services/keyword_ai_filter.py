@@ -283,6 +283,25 @@ def run_keyword_ai_filter(
             else:
                 kw["trend_yoy"] = "-"
             
+            # Add 3-month trend data (compare latest month with 2 months prior)
+            # If latest month is July, compare July with May (2 months prior)
+            monthly_searches = raw_data.get("monthly_searches", [])
+            trend_3m = "-"
+            if len(monthly_searches) >= 3:
+                try:
+                    current_month = monthly_searches[0].get("search_volume")
+                    two_months_ago = monthly_searches[2].get("search_volume")
+                    if current_month is not None and two_months_ago is not None and two_months_ago > 0:
+                        trend_3m_pct = round(((current_month - two_months_ago) / two_months_ago) * 100, 1)
+                        # Use "Stable" for very small changes (within ±1%)
+                        if -1 <= trend_3m_pct <= 1:
+                            trend_3m = "Stable"
+                        else:
+                            trend_3m = f"{'+' if trend_3m_pct > 0 else ''}{trend_3m_pct}%"
+                except (KeyError, ZeroDivisionError, TypeError):
+                    pass
+            kw["trend_3m"] = trend_3m
+            
             # Add monthly searches data (preserve empty array if no data)
             kw["monthly_searches"] = raw_data.get("monthly_searches", [])
             

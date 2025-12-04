@@ -72,7 +72,13 @@ if data1.get("tasks") and data1["tasks"][0].get("result"):
             print(f"  CPC: ${item.get('cpc')}")
             
             monthly = item.get('monthly_searches', [])
-            if monthly and len(monthly) >= 12:
+            if monthly and len(monthly) >= 13:
+                current = monthly[0].get('search_volume')
+                year_ago = monthly[12].get('search_volume')
+                if current and year_ago and year_ago > 0:
+                    yoy = round(((current - year_ago) / year_ago) * 100, 1)
+                    print(f"  YoY Change: {yoy}%")
+            elif monthly and len(monthly) >= 12:
                 current = monthly[0].get('search_volume')
                 year_ago = monthly[11].get('search_volume')
                 if current and year_ago and year_ago > 0:

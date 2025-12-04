@@ -316,8 +316,19 @@ def fetch_keyword_ideas(
         high_micros = int(round(high_bid * 1_000_000)) if high_bid is not None else None
 
         # Calculate YoY change from monthly_searches array ONLY if data exists
+        # Compare latest month (index 0) with same month from last year
+        # If we have exactly 12 months: use index 11
+        # If we have 13+ months: use index 12 (to get same calendar month from exactly 12 months ago)
         yoy_change = None
-        if monthly_searches and len(monthly_searches) >= 12:
+        if monthly_searches and len(monthly_searches) >= 13:
+            try:
+                current_month = monthly_searches[0].get("search_volume")
+                year_ago_month = monthly_searches[12].get("search_volume")
+                if current_month is not None and year_ago_month is not None and year_ago_month > 0:
+                    yoy_change = round(((current_month - year_ago_month) / year_ago_month) * 100, 1)
+            except (IndexError, KeyError, ZeroDivisionError):
+                pass
+        elif monthly_searches and len(monthly_searches) >= 12:
             try:
                 current_month = monthly_searches[0].get("search_volume")
                 year_ago_month = monthly_searches[11].get("search_volume")
