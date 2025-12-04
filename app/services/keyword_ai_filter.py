@@ -274,8 +274,14 @@ def run_keyword_ai_filter(
             kw["search_volume"] = raw_data.get("avg_monthly_searches") if raw_data.get("avg_monthly_searches") is not None else "-"
             kw["competition"] = raw_data.get("competition") if raw_data.get("competition") is not None else "-"
             kw["competition_index"] = raw_data.get("competition_index") if raw_data.get("competition_index") is not None else "-"
-            kw["low_top_of_page_bid_micros"] = raw_data.get("low_top_of_page_bid_micros") if raw_data.get("low_top_of_page_bid_micros") is not None else "-"
-            kw["high_top_of_page_bid_micros"] = raw_data.get("high_top_of_page_bid_micros") if raw_data.get("high_top_of_page_bid_micros") is not None else "-"
+            
+            # Keep raw micros values for formatting, don't convert to "-" yet
+            low_bid_micros = raw_data.get("low_top_of_page_bid_micros")
+            high_bid_micros = raw_data.get("high_top_of_page_bid_micros")
+            
+            # Store both raw micros (for API consumers) and formatted display strings
+            kw["low_top_of_page_bid_micros"] = low_bid_micros if low_bid_micros is not None else "-"
+            kw["high_top_of_page_bid_micros"] = high_bid_micros if high_bid_micros is not None else "-"
             
             # Add currency (always USD from DataForSEO) and formatted bids
             # NOTE: DataForSEO returns all bids in USD regardless of location
@@ -284,8 +290,6 @@ def run_keyword_ai_filter(
             kw["currency"] = currency
             
             # Add formatted bids in USD (as provided by DataForSEO)
-            low_bid_micros = raw_data.get("low_top_of_page_bid_micros")
-            high_bid_micros = raw_data.get("high_top_of_page_bid_micros")
             kw["low_top_of_page_bid"] = format_bid(low_bid_micros, currency)
             kw["high_top_of_page_bid"] = format_bid(high_bid_micros, currency)
             
