@@ -9,6 +9,7 @@ from app.services.firestore import db
 from google.cloud import firestore as gcfirestore
 from app.utils.cost_calculator import calculate_openai_cost
 from app.utils.currency import get_currency_for_location, format_bid
+import tiktoken
 
 # Client initialized lazily
 _client = None
@@ -97,9 +98,10 @@ def run_keyword_ai_filter(
     """
     prompt_template = _load_prompt_text()
 
-    # Limit Google keyword ideas to mitigate TPM rate limits
-    # Increased to 500 to give AI more options to choose from
-    initial_limit = 500
+    # Limit keywords to stay within GPT-4o-mini's 128K token context window
+    # Each keyword with full metrics (search volume, competition, bids, 12 months history) 
+    # takes ~700 tokens. 150 keywords × 700 = 105K tokens + 3K overhead = safe margin
+    initial_limit = 150
     limited_keywords = raw_output[:initial_limit] if isinstance(raw_output, list) else []
 
     # Build prompt with injected JSON blocks
@@ -111,6 +113,52 @@ def run_keyword_ai_filter(
     prompt = prompt.replace(
         "{keywords_list}",
         json.dumps(limited_keywords, ensure_ascii=False, indent=2, default=_json_default),
+    )
+
+    # Safety check: estimate tokens and reduce keywords if needed
+    # GPT-4o-mini has 128K token limit, we target 110K max to leave room for response
+    MAX_TOKENS = 110000
+    try:
+        encoding = tiktoken.encoding_for_model("gpt-4o-mini")
+        estimated_tokens = len(encoding.encode(prompt))
+        
+        if estimated_tokens > MAX_TOKENS:
+            print(f"⚠️  Token estimate {estimated_tokens} exceeds {MAX_TOKENS}. Reducing keywords...")
+            # Binary search to find safe keyword count
+            low, high = 10, len(limited_keywords)
+            safe_count = 10
+            
+            while low <= high:
+                mid = (low + high) // 2
+                test_keywords = raw_output[:mid]
+                test_prompt = prompt_template.replace(
+                    "{intake_json}",
+                    json.dumps(intake, ensure_ascii=False, indent=2, default=_json_default),
+                ).replace(
+                    "{keywords_list}",
+                    json.dumps(test_keywords, ensure_ascii=False, indent=2, default=_json_default),
+                )
+                test_tokens = len(encoding.encode(test_prompt))
+                
+                if test_tokens <= MAX_TOKENS:
+                    safe_count = mid
+                    low = mid + 1
+                else:
+                    high = mid - 1
+            
+            limited_keywords = raw_output[:safe_count]
+            prompt = prompt_template.replace(
+                "{intake_json}",
+                json.dumps(intake, ensure_ascii=False, indent=2, default=_json_default),
+            ).replace(
+                "{keywords_list}",
+                json.dumps(limited_keywords, ensure_ascii=False, indent=2, default=_json_default),
+            )
+            final_tokens = len(encoding.encode(prompt))
+            print(f"✓ Reduced to {safe_count} keywords ({final_tokens} tokens)")
+    except Exception as e:
+        # If tiktoken fails, continue with initial limit and let OpenAI handle it
+        print(f"Token estimation failed: {e}. Proceeding with {len(limited_keywords)} keywords.")
     )
 
     # Load model from system settings or use default
