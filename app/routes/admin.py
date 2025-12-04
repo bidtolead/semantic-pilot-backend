@@ -2,6 +2,7 @@ from fastapi import APIRouter, Header, HTTPException
 from firebase_admin import auth as firebase_auth
 from app.services.firestore import db
 from app.utils.cost_calculator import get_cost_per_1k_tokens, calculate_openai_cost
+from datetime import datetime
 
 router = APIRouter(prefix="/admin", tags=["Admin"])
 
@@ -170,8 +171,13 @@ def get_all_users(authorization: str | None = Header(default=None)):
 def reset_credits(uid: str, authorization: str | None = Header(default=None)):
     require_admin(authorization)
 
-    db.collection("users").document(uid).update({"credits": 50})
-    return {"status": "success", "message": "Credits reset to 50"}
+    db.collection("users").document(uid).update({
+        "credits": 30,
+        "dailyCreditsUsed": 0,
+        "lastCreditReset": datetime.utcnow().isoformat(),
+        "lastDailyReset": datetime.utcnow().isoformat()
+    })
+    return {"status": "success", "message": "Credits reset to 30 (monthly limit)"}
 
 
 # -----------------------------------------------------

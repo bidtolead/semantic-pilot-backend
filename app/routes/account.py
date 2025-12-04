@@ -28,34 +28,35 @@ def export_research_data(authorization: str | None = Header(default=None)):
         decoded = firebase_auth.verify_id_token(token)
         uid = decoded["uid"]
 
-        # Get all research history
-        research_docs = db.collection("seo_research").where("uid", "==", uid).stream()
-        research_list = []
-        for doc in research_docs:
-            research_data = doc.to_dict() or {}
-            research_data["research_id"] = doc.id
-            research_list.append(research_data)
-
-        if not research_list:
-            raise HTTPException(status_code=404, detail="No research data found to export")
-
-        # Create CSV in memory
-        output = io.StringIO()
+        # Get all research results - try both collections
+        research_docs_results = db.collection("keyword_research_results").stream()
+        research_docs_intakes = db.collection("research_intakes").where("uid", "==", uid).stream()
         
-        # Collect all keyword results across all research
+        # Collect all keyword results
         rows = []
         
-        for research in research_list:
-            business_name = research.get('businessName', '')
-            created_at = research.get('createdAt', '')
-            location = research.get('location', '')
+        # Process keyword_research_results collection
+        for doc in research_docs_results:
+            research_data = doc.to_dict() or {}
+            intake_id = doc.id
             
-            if 'keywordData' in research and research['keywordData']:
-                kw_data = research['keywordData']
-                
-                # Export primary keywords
-                if 'primary' in kw_data and isinstance(kw_data['primary'], list):
-                    for kw in kw_data['primary']:
+            # Get corresponding intake for metadata
+            intake_ref = db.collection("research_intakes").document(intake_id)
+            intake_snap = intake_ref.get()
+            intake_data = intake_snap.to_dict() or {} if intake_snap.exists else {}
+            
+            # Only include if it belongs to this user
+            if intake_data.get('uid') != uid:
+                continue
+            
+            business_name = intake_data.get('businessName', '')
+            created_at = intake_data.get('createdAt', '')
+            location = intake_data.get('location', '')
+            
+            # Extract keywords from research_data
+            if 'primary' in research_data and isinstance(research_data['primary'], list):
+                for kw in research_data['primary']:
+                    if isinstance(kw, dict):
                         rows.append({
                             'business_name': business_name,
                             'research_date': created_at,
@@ -66,10 +67,10 @@ def export_research_data(authorization: str | None = Header(default=None)):
                             'competition': kw.get('competition', ''),
                             'cpc': kw.get('cpc', 0),
                         })
-                
-                # Export secondary keywords
-                if 'secondary' in kw_data and isinstance(kw_data['secondary'], list):
-                    for kw in kw_data['secondary']:
+            
+            if 'secondary' in research_data and isinstance(research_data['secondary'], list):
+                for kw in research_data['secondary']:
+                    if isinstance(kw, dict):
                         rows.append({
                             'business_name': business_name,
                             'research_date': created_at,
@@ -83,6 +84,9 @@ def export_research_data(authorization: str | None = Header(default=None)):
         
         if not rows:
             raise HTTPException(status_code=404, detail="No keyword results found to export")
+        
+        # Create CSV in memory
+        output = io.StringIO()
         
         # Define CSV columns - only keyword results
         fieldnames = [
