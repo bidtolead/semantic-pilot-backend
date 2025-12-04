@@ -12,6 +12,11 @@ logger = logging.getLogger(__name__)
 _raw_base = os.getenv("DATAFORSEO_API_BASE", "https://api.dataforseo.com/v3")
 API_BASE = _raw_base.rstrip("/").replace("v3)", "v3")  # Fix common typo
 
+# Track actual costs from DataForSEO API responses
+_last_step1_cost = 0.0
+_last_step2_cost = 0.0
+_last_total_cost = 0.0
+
 
 def clean_location_name(location: str) -> str:
     """Clean location string and convert to DataForSEO format.
@@ -217,8 +222,14 @@ def fetch_keyword_ideas(
         logger.warning(f"DataForSEO Step 1 returned no results for location_code={location_name}")
         return []
     
+    # Capture actual Step 1 cost
+    global _last_step1_cost
+    _last_step1_cost = tasks[0].get("cost", 0.0)
+    print(f"🔍 Step 1 actual cost from DataForSEO: ${_last_step1_cost:.6f}", flush=True)
+    
     # IMPORTANT: result is already an array of keyword items, not a wrapper object with "items"
-    items = tasks[0]["result"][:200]  # Limit to top 200 keywords
+    # We pay the same $0.075 whether we use 200 or 1000 keywords, so fetch all available keywords
+    items = tasks[0]["result"][:1000]  # Limit to top 1000 keywords (same price as 200)
     
     logger.info(f"DataForSEO Step 1 returned {len(items)} keywords for location_code={location_name}")
     
@@ -252,6 +263,8 @@ def fetch_keyword_ideas(
         if volume_data.get("tasks") and len(volume_data["tasks"]) > 0:
             task = volume_data["tasks"][0]
             print(f"🔍 Step 2 task status: {task.get('status_code')} - {task.get('status_message')}", flush=True)
+            print(f"🔍 Step 2 task cost: {task.get('cost')}", flush=True)
+            print(f"🔍 Step 2 task credits_used: {task.get('credits_used')}", flush=True)
             result = task.get('result')
             if result:
                 print(f"🔍 Step 2 result count: {len(result)}", flush=True)
@@ -270,6 +283,13 @@ def fetch_keyword_ideas(
     if not volume_tasks:
         logger.warning(f"DataForSEO Step 2 returned no tasks")
         return []
+    
+    # Capture actual Step 2 cost
+    global _last_step2_cost, _last_total_cost
+    _last_step2_cost = volume_tasks[0].get("cost", 0.0)
+    _last_total_cost = _last_step1_cost + _last_step2_cost
+    print(f"🔍 Step 2 actual cost from DataForSEO: ${_last_step2_cost:.6f}", flush=True)
+    print(f"💰 TOTAL COST: Step 1=${_last_step1_cost:.6f} + Step 2=${_last_step2_cost:.6f} = ${_last_total_cost:.6f}", flush=True)
     
     volume_result = volume_tasks[0].get("result")
     if not volume_result:
@@ -371,17 +391,15 @@ def fetch_keyword_ideas(
 
 
 def get_dataforseo_cost() -> float:
-    """Return the cost per DataForSEO request.
+    """Return the actual cost of the last DataForSEO request.
     
-    DataForSEO pricing:
-    - keywords_for_keywords (Step 1): $0.015 per request (Live)
-    - search_volume (Step 2): $0.015 per request (Live)
-    - Total cost per fetch_keyword_ideas call: $0.03
+    DataForSEO returns the actual cost in each task response.
+    This function returns the combined cost from the last fetch_keyword_ideas call.
     
     Returns:
-        Cost in USD
+        Actual cost in USD from the last DataForSEO request (or $0.00 if not run yet)
     """
-    return 0.03  # $0.015 x 2 steps
+    return _last_total_cost
 
 
 def fetch_locations() -> List[Dict]:

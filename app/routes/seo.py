@@ -289,11 +289,12 @@ async def run_keyword_research(
         try:
             from app.services.dataforseo import get_dataforseo_cost
             dataforseo_cost = get_dataforseo_cost()
+            print(f"💰 DataForSEO cost tracked: ${dataforseo_cost:.4f}", flush=True)
             user_ref.update({
                 "dataforseoSpend": gcfirestore.Increment(dataforseo_cost)
             })
-        except Exception:
-            pass  # Non-critical
+        except Exception as e:
+            print(f"⚠️ Failed to track DataForSEO cost: {e}", flush=True)
             
     except Exception as e:
         raise HTTPException(
