@@ -345,7 +345,7 @@ def fetch_keyword_ideas(
             "low_top_of_page_bid_micros": low_micros,  # None if DataForSEO didn't provide
             "high_top_of_page_bid_micros": high_micros,  # None if DataForSEO didn't provide
             "yoy_change": yoy_change,  # None if not enough data
-            "monthly_searches": monthly_searches,  # Empty array if no data
+            "monthly_searches": monthly_searches if monthly_searches is not None else [],  # Always an array, never None
         })
 
     logger.info(f"DataForSEO completed: returned {len(out)} keywords with metrics")
