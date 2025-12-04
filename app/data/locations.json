@@ -1,0 +1,140 @@
+[
+  {
+    "id": "1023191",
+    "name": "New York, NY, United States",
+    "countryCode": "US",
+    "targetType": "City"
+  },
+  {
+    "id": "1014044",
+    "name": "Los Angeles, CA, United States",
+    "countryCode": "US",
+    "targetType": "City"
+  },
+  {
+    "id": "1012728",
+    "name": "Chicago, IL, United States",
+    "countryCode": "US",
+    "targetType": "City"
+  },
+  {
+    "id": "1021224",
+    "name": "Houston, TX, United States",
+    "countryCode": "US",
+    "targetType": "City"
+  },
+  {
+    "id": "1023040",
+    "name": "Phoenix, AZ, United States",
+    "countryCode": "US",
+    "targetType": "City"
+  },
+  {
+    "id": "1025197",
+    "name": "San Francisco, CA, United States",
+    "countryCode": "US",
+    "targetType": "City"
+  },
+  {
+    "id": "1026201",
+    "name": "Seattle, WA, United States",
+    "countryCode": "US",
+    "targetType": "City"
+  },
+  {
+    "id": "1013962",
+    "name": "Miami, FL, United States",
+    "countryCode": "US",
+    "targetType": "City"
+  },
+  {
+    "id": "2840",
+    "name": "United States",
+    "countryCode": "US",
+    "targetType": "Country"
+  },
+  {
+    "id": "9000093",
+    "name": "Toronto, ON, Canada",
+    "countryCode": "CA",
+    "targetType": "City"
+  },
+  {
+    "id": "9000071",
+    "name": "Vancouver, BC, Canada",
+    "countryCode": "CA",
+    "targetType": "City"
+  },
+  {
+    "id": "9000040",
+    "name": "Montreal, QC, Canada",
+    "countryCode": "CA",
+    "targetType": "City"
+  },
+  {
+    "id": "2124",
+    "name": "Canada",
+    "countryCode": "CA",
+    "targetType": "Country"
+  },
+  {
+    "id": "1006886",
+    "name": "London, United Kingdom",
+    "countryCode": "GB",
+    "targetType": "City"
+  },
+  {
+    "id": "1006099",
+    "name": "Manchester, United Kingdom",
+    "countryCode": "GB",
+    "targetType": "City"
+  },
+  {
+    "id": "2826",
+    "name": "United Kingdom",
+    "countryCode": "GB",
+    "targetType": "Country"
+  },
+  {
+    "id": "1000339",
+    "name": "Sydney NSW, Australia",
+    "countryCode": "AU",
+    "targetType": "City"
+  },
+  {
+    "id": "1000318",
+    "name": "Melbourne VIC, Australia",
+    "countryCode": "AU",
+    "targetType": "City"
+  },
+  {
+    "id": "1000310",
+    "name": "Brisbane QLD, Australia",
+    "countryCode": "AU",
+    "targetType": "City"
+  },
+  {
+    "id": "2036",
+    "name": "Australia",
+    "countryCode": "AU",
+    "targetType": "Country"
+  },
+  {
+    "id": "1011036",
+    "name": "Auckland, New Zealand",
+    "countryCode": "NZ",
+    "targetType": "City"
+  },
+  {
+    "id": "1001460",
+    "name": "Wellington, New Zealand",
+    "countryCode": "NZ",
+    "targetType": "City"
+  },
+  {
+    "id": "2554",
+    "name": "New Zealand",
+    "countryCode": "NZ",
+    "targetType": "Country"
+  }
+]
