@@ -28,30 +28,37 @@ def export_research_data(authorization: str | None = Header(default=None)):
         decoded = firebase_auth.verify_id_token(token)
         uid = decoded["uid"]
 
-        # First, get all research intakes for this user
-        intake_docs = list(db.collection("research_intakes").where("uid", "==", uid).stream())
-        print(f"🔍 Found {len(intake_docs)} research intakes for user {uid}")
+        # Query the user's research subcollection: users/{uid}/research
+        research_subcollection = db.collection("users").document(uid).collection("research")
+        research_docs = list(research_subcollection.stream())
+        
+        print(f"🔍 Found {len(research_docs)} research documents in users/{uid}/research")
         
         # Collect all keyword results
         rows = []
         
-        # For each intake, get the corresponding keyword results
-        for intake_doc in intake_docs:
-            intake_id = intake_doc.id
-            intake_data = intake_doc.to_dict() or {}
+        # For each research document, get the corresponding keyword results
+        for research_doc in research_docs:
+            intake_id = research_doc.id
+            research_metadata = research_doc.to_dict() or {}
             
-            print(f"📋 Processing intake {intake_id}")
+            print(f"📋 Processing research {intake_id}")
             
-            business_name = intake_data.get('businessName', '')
-            created_at = intake_data.get('createdAt', '')
-            location = intake_data.get('location', '')
+            # Get the research intake data for metadata
+            intake_ref = db.collection("research_intakes").document(intake_id)
+            intake_snap = intake_ref.get()
+            intake_data = intake_snap.to_dict() or {} if intake_snap.exists else {}
+            
+            business_name = intake_data.get('businessName', research_metadata.get('businessName', ''))
+            created_at = intake_data.get('createdAt', research_metadata.get('createdAt', ''))
+            location = intake_data.get('location', research_metadata.get('location', ''))
             
             # Get keyword results for this intake
             results_ref = db.collection("keyword_research_results").document(intake_id)
             results_snap = results_ref.get()
             
             if not results_snap.exists:
-                print(f"⚠️  No keyword_research_results found for intake {intake_id}")
+                print(f"⚠️  No keyword_research_results found for {intake_id}")
                 continue
                 
             research_data = results_snap.to_dict() or {}
