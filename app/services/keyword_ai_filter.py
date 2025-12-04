@@ -291,6 +291,7 @@ def run_keyword_ai_filter(
                 if monthly_searches and isinstance(monthly_searches, list) and len(monthly_searches) >= 3:
                     current_month = monthly_searches[0].get("search_volume") if isinstance(monthly_searches[0], dict) else None
                     two_months_ago = monthly_searches[2].get("search_volume") if isinstance(monthly_searches[2], dict) else None
+                    print(f"   3M trend for '{keyword_text}': current={current_month}, 2mo_ago={two_months_ago}")
                     if current_month is not None and two_months_ago is not None and two_months_ago > 0:
                         trend_3m_pct = round(((current_month - two_months_ago) / two_months_ago) * 100, 1)
                         # Use "Stable" for very small changes (within ±1%)
@@ -298,8 +299,9 @@ def run_keyword_ai_filter(
                             trend_3m = "Stable"
                         else:
                             trend_3m = f"{'+' if trend_3m_pct > 0 else ''}{trend_3m_pct}%"
+                        print(f"      Result: {trend_3m}")
             except (KeyError, ZeroDivisionError, TypeError, IndexError) as e:
-                print(f"⚠️  Error calculating 3-month trend: {e}")
+                print(f"⚠️  Error calculating 3-month trend for '{keyword_text}': {e}")
                 pass
             kw["trend_3m"] = trend_3m
             

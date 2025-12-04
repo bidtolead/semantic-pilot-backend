@@ -315,6 +315,20 @@ def fetch_keyword_ideas(
         low_micros = int(round(low_bid * 1_000_000)) if low_bid is not None else None
         high_micros = int(round(high_bid * 1_000_000)) if high_bid is not None else None
 
+        # DEBUG: Log monthly_searches structure for first 3 keywords
+        if keyword_list.index(kw) < 3:
+            print(f"\n🔍 DEBUG: Keyword '{kw}'")
+            print(f"   monthly_searches length: {len(monthly_searches)}")
+            if monthly_searches:
+                print(f"   Monthly data (first 3): {monthly_searches[:3]}")
+                print(f"   Latest month (index 0): {monthly_searches[0]}")
+                if len(monthly_searches) > 2:
+                    print(f"   2 months ago (index 2): {monthly_searches[2]}")
+                if len(monthly_searches) > 11:
+                    print(f"   12 months ago (index 11): {monthly_searches[11]}")
+                if len(monthly_searches) > 12:
+                    print(f"   13 months ago (index 12): {monthly_searches[12]}")
+
         # Calculate YoY change from monthly_searches array ONLY if data exists
         # Compare latest month (index 0) with same month from last year
         # If we have exactly 12 months: use index 11
@@ -326,6 +340,7 @@ def fetch_keyword_ideas(
                 year_ago_month = monthly_searches[12].get("search_volume")
                 if current_month is not None and year_ago_month is not None and year_ago_month > 0:
                     yoy_change = round(((current_month - year_ago_month) / year_ago_month) * 100, 1)
+                    print(f"   YoY (13+ months): {current_month} vs {year_ago_month} = {yoy_change}%")
             except (IndexError, KeyError, ZeroDivisionError):
                 pass
         elif monthly_searches and len(monthly_searches) >= 12:
@@ -334,6 +349,7 @@ def fetch_keyword_ideas(
                 year_ago_month = monthly_searches[11].get("search_volume")
                 if current_month is not None and year_ago_month is not None and year_ago_month > 0:
                     yoy_change = round(((current_month - year_ago_month) / year_ago_month) * 100, 1)
+                    print(f"   YoY (12 months): {current_month} vs {year_ago_month} = {yoy_change}%")
             except (IndexError, KeyError, ZeroDivisionError):
                 pass
 
