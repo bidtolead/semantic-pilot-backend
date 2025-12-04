@@ -28,30 +28,29 @@ def export_research_data(authorization: str | None = Header(default=None)):
         decoded = firebase_auth.verify_id_token(token)
         uid = decoded["uid"]
 
-        # Get all research results - try both collections
-        research_docs_results = db.collection("keyword_research_results").stream()
-        research_docs_intakes = db.collection("research_intakes").where("uid", "==", uid).stream()
+        # First, get all research intakes for this user
+        intake_docs = db.collection("research_intakes").where("uid", "==", uid).stream()
         
         # Collect all keyword results
         rows = []
         
-        # Process keyword_research_results collection
-        for doc in research_docs_results:
-            research_data = doc.to_dict() or {}
-            intake_id = doc.id
-            
-            # Get corresponding intake for metadata
-            intake_ref = db.collection("research_intakes").document(intake_id)
-            intake_snap = intake_ref.get()
-            intake_data = intake_snap.to_dict() or {} if intake_snap.exists else {}
-            
-            # Only include if it belongs to this user
-            if intake_data.get('uid') != uid:
-                continue
+        # For each intake, get the corresponding keyword results
+        for intake_doc in intake_docs:
+            intake_id = intake_doc.id
+            intake_data = intake_doc.to_dict() or {}
             
             business_name = intake_data.get('businessName', '')
             created_at = intake_data.get('createdAt', '')
             location = intake_data.get('location', '')
+            
+            # Get keyword results for this intake
+            results_ref = db.collection("keyword_research_results").document(intake_id)
+            results_snap = results_ref.get()
+            
+            if not results_snap.exists:
+                continue
+                
+            research_data = results_snap.to_dict() or {}
             
             # Extract keywords from research_data
             if 'primary' in research_data and isinstance(research_data['primary'], list):
