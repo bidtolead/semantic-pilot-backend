@@ -330,28 +330,30 @@ def fetch_keyword_ideas(
                     print(f"   13 months ago (index 12): {monthly_searches[12]}")
 
         # Calculate YoY change from monthly_searches array ONLY if data exists
-        # Compare latest month (index 0) with same month from last year
-        # If we have exactly 12 months: use index 11
-        # If we have 13+ months: use index 12 (to get same calendar month from exactly 12 months ago)
+        # Proper YoY requires comparing the SAME calendar month from last year
+        # e.g., Oct 2025 vs Oct 2024 (exactly 12 months apart)
+        # We need at least 13 data points to have this
         yoy_change = None
         if monthly_searches and len(monthly_searches) >= 13:
             try:
-                current_month = monthly_searches[0].get("search_volume")
-                year_ago_month = monthly_searches[12].get("search_volume")
-                if current_month is not None and year_ago_month is not None and year_ago_month > 0:
+                current_month_data = monthly_searches[0]
+                year_ago_month_data = monthly_searches[12]  # Exactly 12 months prior
+                
+                current_month = current_month_data.get("search_volume")
+                year_ago_month = year_ago_month_data.get("search_volume")
+                current_date = (current_month_data.get("year"), current_month_data.get("month"))
+                year_ago_date = (year_ago_month_data.get("year"), year_ago_month_data.get("month"))
+                
+                # Verify we're comparing same calendar month (e.g., Oct vs Oct, not Oct vs Nov)
+                if current_date[1] == year_ago_date[1] and current_month is not None and year_ago_month is not None and year_ago_month > 0:
                     yoy_change = round(((current_month - year_ago_month) / year_ago_month) * 100, 1)
-                    print(f"   YoY (13+ months): {current_month} vs {year_ago_month} = {yoy_change}%")
+                    print(f"   YoY (13+ months, same calendar month): {current_date} {current_month} vs {year_ago_date} {year_ago_month} = {yoy_change}%")
             except (IndexError, KeyError, ZeroDivisionError):
                 pass
-        elif monthly_searches and len(monthly_searches) >= 12:
-            try:
-                current_month = monthly_searches[0].get("search_volume")
-                year_ago_month = monthly_searches[11].get("search_volume")
-                if current_month is not None and year_ago_month is not None and year_ago_month > 0:
-                    yoy_change = round(((current_month - year_ago_month) / year_ago_month) * 100, 1)
-                    print(f"   YoY (12 months): {current_month} vs {year_ago_month} = {yoy_change}%")
-            except (IndexError, KeyError, ZeroDivisionError):
-                pass
+        
+        # Fallback: if we only have 12 months and can't do proper YOY, leave as None
+        if yoy_change is None and monthly_searches and len(monthly_searches) >= 12:
+            print(f"   YoY: Only 12 months of data available, cannot compare same calendar month (would need 13+ months)")
 
         out.append({
             "keyword": kw,

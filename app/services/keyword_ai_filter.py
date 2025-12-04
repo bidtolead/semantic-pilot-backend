@@ -8,6 +8,7 @@ import time
 from app.services.firestore import db
 from google.cloud import firestore as gcfirestore
 from app.utils.cost_calculator import calculate_openai_cost
+from app.utils.currency import get_currency_for_location, format_bid
 
 # Client initialized lazily
 _client = None
@@ -275,6 +276,18 @@ def run_keyword_ai_filter(
             kw["competition_index"] = raw_data.get("competition_index") if raw_data.get("competition_index") is not None else "-"
             kw["low_top_of_page_bid_micros"] = raw_data.get("low_top_of_page_bid_micros") if raw_data.get("low_top_of_page_bid_micros") is not None else "-"
             kw["high_top_of_page_bid_micros"] = raw_data.get("high_top_of_page_bid_micros") if raw_data.get("high_top_of_page_bid_micros") is not None else "-"
+            
+            # Add currency (always USD from DataForSEO) and formatted bids
+            # NOTE: DataForSEO returns all bids in USD regardless of location
+            # We always use USD to match the API source data
+            currency = "USD"
+            kw["currency"] = currency
+            
+            # Add formatted bids in USD (as provided by DataForSEO)
+            low_bid_micros = raw_data.get("low_top_of_page_bid_micros")
+            high_bid_micros = raw_data.get("high_top_of_page_bid_micros")
+            kw["low_top_of_page_bid"] = format_bid(low_bid_micros, currency)
+            kw["high_top_of_page_bid"] = format_bid(high_bid_micros, currency)
             
             # Add YoY trend data
             yoy = raw_data.get("yoy_change")
