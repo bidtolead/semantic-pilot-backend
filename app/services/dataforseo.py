@@ -352,7 +352,6 @@ def fetch_keyword_ideas(
         # Calculate YoY change from monthly_searches array ONLY if data exists
         # Proper YoY requires comparing the SAME calendar month from last year
         # e.g., Oct 2025 vs Oct 2024 (exactly 12 months apart)
-        # We need at least 13 data points to have this
         yoy_change = None
         if monthly_searches and len(monthly_searches) >= 13:
             try:
@@ -371,9 +370,22 @@ def fetch_keyword_ideas(
             except (IndexError, KeyError, ZeroDivisionError):
                 pass
         
-        # Fallback: if we only have 12 months and can't do proper YOY, leave as None
+        # Fallback: if we only have 12 months, use approximate YoY (month 0 vs month 11)
         if yoy_change is None and monthly_searches and len(monthly_searches) >= 12:
-            print(f"   YoY: Only 12 months of data available, cannot compare same calendar month (would need 13+ months)")
+            try:
+                current_month_data = monthly_searches[0]
+                year_ago_month_data = monthly_searches[11]  # 11 months back (approximate)
+                
+                current_month = current_month_data.get("search_volume")
+                year_ago_month = year_ago_month_data.get("search_volume")
+                
+                if current_month is not None and year_ago_month is not None and year_ago_month > 0:
+                    yoy_change = round(((current_month - year_ago_month) / year_ago_month) * 100, 1)
+                    current_date = (current_month_data.get("year"), current_month_data.get("month"))
+                    year_ago_date = (year_ago_month_data.get("year"), year_ago_month_data.get("month"))
+                    print(f"   YoY (12 months approx): {current_date} {current_month} vs {year_ago_date} {year_ago_month} = {yoy_change}%")
+            except (IndexError, KeyError, ZeroDivisionError):
+                print(f"   YoY: Cannot calculate from 12 months of data")
 
         out.append({
             "keyword": kw,
