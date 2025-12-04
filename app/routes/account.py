@@ -148,6 +148,138 @@ def export_research_data(authorization: str | None = Header(default=None)):
 
 
 # ----------------------------------------
+# EXPORT SINGLE RESEARCH REPORT AS CSV
+# ----------------------------------------
+@router.get("/export-single")
+def export_single_research(researchId: str, authorization: str | None = Header(default=None)):
+    """
+    Export a single research report as CSV file.
+    """
+    if not authorization or not authorization.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Missing or invalid Authorization header")
+
+    token = authorization.split(" ")[1]
+
+    try:
+        decoded = firebase_auth.verify_id_token(token)
+        uid = decoded["uid"]
+
+        # Get metadata from research_intakes or from the user's research subcollection
+        intake_ref = db.collection("research_intakes").document(researchId)
+        intake_snap = intake_ref.get()
+        intake_data = intake_snap.to_dict() or {} if intake_snap.exists else {}
+        
+        # Also check user's research subcollection
+        user_research_ref = db.collection("users").document(uid).collection("research").document(researchId)
+        user_research_snap = user_research_ref.get()
+        user_research_data = user_research_snap.to_dict() or {} if user_research_snap.exists else {}
+        
+        business_name = intake_data.get('businessName', user_research_data.get('businessName', ''))
+        created_at = intake_data.get('createdAt', user_research_data.get('createdAt', ''))
+        location = intake_data.get('location', user_research_data.get('location', ''))
+        
+        # Get keyword results from intakes/{userId}/{researchId}/keyword_research
+        keyword_research_ref = (
+            db.collection("intakes")
+            .document(uid)
+            .collection(researchId)
+            .document("keyword_research")
+        )
+        keyword_research_snap = keyword_research_ref.get()
+        
+        if not keyword_research_snap.exists:
+            raise HTTPException(status_code=404, detail="No keyword results found for this research")
+            
+        research_data = keyword_research_snap.to_dict() or {}
+        
+        # Collect all keyword results
+        rows = []
+        
+        # Extract keywords from research_data
+        if 'primary_keywords' in research_data and isinstance(research_data['primary_keywords'], list):
+            for kw in research_data['primary_keywords']:
+                if isinstance(kw, dict):
+                    rows.append({
+                        'business_name': business_name,
+                        'research_date': created_at,
+                        'location': location,
+                        'keyword_type': 'Primary',
+                        'keyword': kw.get('keyword', ''),
+                        'search_volume': kw.get('search_volume', 0),
+                        'competition': kw.get('competition', ''),
+                        'cpc': kw.get('cpc', 0),
+                    })
+        
+        if 'secondary_keywords' in research_data and isinstance(research_data['secondary_keywords'], list):
+            for kw in research_data['secondary_keywords']:
+                if isinstance(kw, dict):
+                    rows.append({
+                        'business_name': business_name,
+                        'research_date': created_at,
+                        'location': location,
+                        'keyword_type': 'Secondary',
+                        'keyword': kw.get('keyword', ''),
+                        'search_volume': kw.get('search_volume', 0),
+                        'competition': kw.get('competition', ''),
+                        'cpc': kw.get('cpc', 0),
+                    })
+        
+        if 'long_tail_keywords' in research_data and isinstance(research_data['long_tail_keywords'], list):
+            for kw in research_data['long_tail_keywords']:
+                if isinstance(kw, dict):
+                    rows.append({
+                        'business_name': business_name,
+                        'research_date': created_at,
+                        'location': location,
+                        'keyword_type': 'Long-tail',
+                        'keyword': kw.get('keyword', ''),
+                        'search_volume': kw.get('search_volume', 0),
+                        'competition': kw.get('competition', ''),
+                        'cpc': kw.get('cpc', 0),
+                    })
+        
+        if not rows:
+            raise HTTPException(status_code=404, detail="No keyword results found in this research")
+        
+        # Create CSV in memory
+        output = io.StringIO()
+        
+        fieldnames = [
+            'business_name',
+            'research_date',
+            'location',
+            'keyword_type',
+            'keyword',
+            'search_volume',
+            'competition',
+            'cpc',
+        ]
+        
+        writer = csv.DictWriter(output, fieldnames=fieldnames)
+        writer.writeheader()
+        writer.writerows(rows)
+        
+        # Prepare response
+        output.seek(0)
+        csv_content = output.getvalue()
+        
+        filename = f"{business_name.replace(' ', '-') if business_name else 'research'}-{datetime.utcnow().strftime('%Y%m%d')}.csv"
+        
+        return StreamingResponse(
+            iter([csv_content]),
+            media_type="text/csv",
+            headers={
+                "Content-Disposition": f"attachment; filename={filename}"
+            }
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Export failed: {str(e)}")
+
+
+# ----------------------------------------
 # UPDATE EMAIL PREFERENCES
 # ----------------------------------------
 @router.post("/update-preferences")
