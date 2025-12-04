@@ -98,11 +98,17 @@ def run_keyword_ai_filter(
     """
     prompt_template = _load_prompt_text()
 
-    # Limit keywords to stay within GPT-4o-mini's 128K token context window
+    # Sort keywords by search volume (highest first) and take top 150
+    # This ensures AI gets the most popular/relevant keywords to analyze
     # Each keyword with full metrics (search volume, competition, bids, 12 months history) 
     # takes ~700 tokens. 150 keywords × 700 = 105K tokens + 3K overhead = safe margin
     initial_limit = 150
-    limited_keywords = raw_output[:initial_limit] if isinstance(raw_output, list) else []
+    sorted_keywords = sorted(
+        raw_output if isinstance(raw_output, list) else [],
+        key=lambda k: k.get("avg_monthly_searches") or 0,
+        reverse=True
+    )
+    limited_keywords = sorted_keywords[:initial_limit]
 
     # Build prompt with injected JSON blocks
     prompt = prompt_template

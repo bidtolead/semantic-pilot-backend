@@ -402,6 +402,251 @@ def get_dataforseo_cost() -> float:
     return _last_total_cost
 
 
+def filter_keywords_by_intake(
+    keywords: List[Dict],
+    negative_keywords: Optional[str] = None,
+    excluded_brands: Optional[str] = None,
+    location_name: Optional[str] = None,
+) -> List[Dict]:
+    """Filter keywords based on multiple criteria from intake.
+    
+    Removes keywords that:
+    1. Have search volume < 10 (too low traffic)
+    2. Contain negative keywords
+    3. Contain excluded brands
+    4. Contain irrelevant location names (e.g., "Wellington" when looking for "Auckland")
+    
+    This helps eliminate low-quality and irrelevant results before sending to AI.
+    
+    Args:
+        keywords: List of keyword dicts from DataForSEO
+        negative_keywords: Comma-separated list of keywords to exclude (e.g., "cheap,free,sale")
+        excluded_brands: Comma-separated list of brands to exclude (e.g., "Nike,Adidas")
+        location_name: Target location (e.g., "Auckland,New Zealand") to filter for location relevance
+    
+    Returns:
+        Filtered list of keywords
+    """
+    if not keywords:
+        return keywords
+    
+    original_count = len(keywords)
+    
+    # Step 1: Filter by search volume (remove keywords with volume < 10)
+    filtered = []
+    for keyword_obj in keywords:
+        search_vol = keyword_obj.get("avg_monthly_searches")
+        # Keep only if search_vol is a number and >= 10
+        if search_vol is not None and isinstance(search_vol, (int, float)) and search_vol >= 10:
+            filtered.append(keyword_obj)
+    
+    low_volume_removed = original_count - len(filtered)
+    if low_volume_removed > 0:
+        logger.info(f"Filtered by search volume: removed {low_volume_removed} keywords with volume < 10")
+        print(f"🔍 Search volume filter: removed {low_volume_removed} keywords (volume < 10)")
+    
+    # Step 1.5: Filter out single-word keywords (too generic)
+    before_single_word = len(filtered)
+    filtered = [
+        kw for kw in filtered
+        if len(kw.get("keyword", "").strip().split()) > 1
+    ]
+    single_word_removed = before_single_word - len(filtered)
+    if single_word_removed > 0:
+        logger.info(f"Filtered single-word keywords: removed {single_word_removed} keywords")
+        print(f"🔍 Single-word keywords filter: removed {single_word_removed} keywords (too generic)")
+    
+    # Step 1.6: Filter out keywords with non-ASCII/foreign characters
+    before_foreign = len(filtered)
+    filtered = [
+        kw for kw in filtered
+        if all(ord(char) < 128 or char.isspace() or char in "'-" for char in kw.get("keyword", ""))
+    ]
+    foreign_removed = before_foreign - len(filtered)
+    if foreign_removed > 0:
+        logger.info(f"Filtered foreign language keywords: removed {foreign_removed} keywords")
+        print(f"🔍 Foreign language filter: removed {foreign_removed} keywords (non-ASCII characters)")
+    
+    # Step 1.7: Filter out keywords with duplicate/repeated words
+    before_duplicates = len(filtered)
+    filtered_no_dupes = []
+    for kw_obj in filtered:
+        keyword_text = kw_obj.get("keyword", "").strip().lower()
+        words = keyword_text.split()
+        
+        # Check if any word appears more than once
+        if len(words) == len(set(words)):  # All words are unique
+            filtered_no_dupes.append(kw_obj)
+    
+    filtered = filtered_no_dupes
+    duplicate_removed = before_duplicates - len(filtered)
+    if duplicate_removed > 0:
+        logger.info(f"Filtered duplicate word keywords: removed {duplicate_removed} keywords")
+        print(f"🔍 Duplicate words filter: removed {duplicate_removed} keywords (e.g., 'seo services seo')")
+    
+    # Step 1.8: Filter out keywords with special symbols
+    before_special = len(filtered)
+    # Allow only alphanumeric, spaces, hyphens, and apostrophes
+    filtered = [
+        kw for kw in filtered
+        if all(char.isalnum() or char.isspace() or char in "-'" for char in kw.get("keyword", ""))
+    ]
+    special_removed = before_special - len(filtered)
+    if special_removed > 0:
+        logger.info(f"Filtered special symbols keywords: removed {special_removed} keywords")
+        print(f"🔍 Special symbols filter: removed {special_removed} keywords (e.g., '[seo]', 'services%', etc.)")
+    
+    # Step 1.9: Filter out keywords with past dates (earlier than current year)
+    import re
+    from datetime import datetime
+    
+    before_dates = len(filtered)
+    current_year = datetime.now().year
+    filtered_no_dates = []
+    
+    for kw_obj in filtered:
+        keyword_text = kw_obj.get("keyword", "").strip()
+        # Find all 4-digit numbers that look like years (1900-2099)
+        years = re.findall(r'\b(19\d{2}|20\d{2})\b', keyword_text)
+        
+        # Check if any year is from the past (before current year)
+        has_past_date = any(int(year) < current_year for year in years)
+        
+        if not has_past_date:
+            filtered_no_dates.append(kw_obj)
+    
+    filtered = filtered_no_dates
+    dates_removed = before_dates - len(filtered)
+    if dates_removed > 0:
+        logger.info(f"Filtered past date keywords: removed {dates_removed} keywords")
+        print(f"🔍 Past dates filter: removed {dates_removed} keywords (e.g., 'seo for 2024', 'best 2023 practices', etc.)")
+    
+    # Step 2: Filter by negative keywords
+    negative_list = []
+    if negative_keywords:
+        negative_list = [kw.strip().lower() for kw in negative_keywords.split(",") if kw.strip()]
+    
+    # Add "near me" to default negatives (always filter these out)
+    default_negatives = ["near me", "near by", "nearby"]
+    negative_list.extend(default_negatives)
+    
+    if negative_list:
+        before_negative = len(filtered)
+        filtered = [
+            kw for kw in filtered
+            if not any(neg in kw.get("keyword", "").lower() for neg in negative_list)
+        ]
+        removed = before_negative - len(filtered)
+        if removed > 0:
+            logger.info(f"Filtered by negative keywords: removed {removed} keywords")
+            print(f"🔍 Negative keywords filter: removed {removed} keywords (including 'near me', 'nearby', etc.)")
+    
+    # Step 3: Filter by excluded brands
+    excluded_list = []
+    if excluded_brands:
+        excluded_list = [brand.strip().lower() for brand in excluded_brands.split(",") if brand.strip()]
+    
+    if excluded_list:
+        before_brands = len(filtered)
+        filtered = [
+            kw for kw in filtered
+            if not any(brand in kw.get("keyword", "").lower() for brand in excluded_list)
+        ]
+        removed = before_brands - len(filtered)
+        if removed > 0:
+            logger.info(f"Filtered by excluded brands: removed {removed} keywords")
+            print(f"🔍 Excluded brands filter: removed {removed} keywords")
+    
+    # Step 4: Filter by location relevance and exclude irrelevant countries
+    # Extract the main location name (before comma if exists)
+    target_location_main = None
+    target_country = None
+    if location_name:
+        # location_name format: "Auckland,New Zealand" or just "New Zealand"
+        parts = location_name.split(",")
+        target_location_main = parts[0].strip().lower() if parts else None
+        if len(parts) > 1:
+            target_country = parts[1].strip().lower()
+    
+    # List of common location names to filter out if they don't match target
+    # This includes other cities, countries, regions that might be irrelevant
+    common_locations = {
+        # NZ cities/regions
+        "auckland", "wellington", "christchurch", "dunedin", "hamilton", "tauranga",
+        "palmerston north", "rotorua", "whangarei", "nelson", "invercargill",
+        # AU cities
+        "sydney", "melbourne", "brisbane", "perth", "adelaide", "hobart", "canberra",
+        # US states/cities
+        "new york", "california", "texas", "florida", "chicago", "los angeles",
+        "san francisco", "seattle", "boston", "miami", "denver", "austin",
+        # UK cities
+        "london", "manchester", "birmingham", "leeds", "glasgow", "edinburgh",
+        # Other countries
+        "usa", "america", "canada", "australia", "england", "scotland", "wales",
+        "ireland", "france", "germany", "spain", "italy", "japan", "china",
+        "india", "singapore", "thailand", "philippines",
+    }
+    
+    if target_location_main and target_location_main in common_locations:
+        before_location = len(filtered)
+        # Build list of other locations to exclude (all common locations except target)
+        other_locations = common_locations - {target_location_main}
+        
+        filtered = [
+            kw for kw in filtered
+            if not any(loc in kw.get("keyword", "").lower() for loc in other_locations)
+        ]
+        removed = before_location - len(filtered)
+        if removed > 0:
+            logger.info(f"Filtered by location relevance: removed {removed} keywords with irrelevant locations")
+            print(f"🔍 Location filter: removed {removed} keywords with irrelevant locations (target: {target_location_main})")
+    
+    # Step 4.1: Filter by irrelevant countries
+    # Exclude keywords mentioning countries outside your target markets
+    allowed_countries = {
+        "new zealand", "nz",
+        "australia", "au",
+        "united states", "usa", "america", "us",
+        "united kingdom", "uk", "gb", "england", "scotland", "wales",
+        "ireland", "ie",
+        "canada", "ca",
+        "singapore", "sg",
+        "united arab emirates", "uae", "ae",
+        "israel", "il",
+        "south africa", "za",
+        "philippines", "ph",
+        "india", "in",
+        "nigeria", "ng",
+    }
+    
+    # Countries to exclude (all other countries)
+    excluded_countries = {
+        "france", "germany", "spain", "italy", "netherlands", "belgium", "switzerland",
+        "sweden", "norway", "denmark", "finland", "poland", "czech", "austria",
+        "portugal", "greece", "romania", "hungary", "ukraine", "russia",
+        "china", "japan", "south korea", "korea", "thailand", "vietnam",
+        "indonesia", "malaysia", "pakistan", "bangladesh", "sri lanka",
+        "brazil", "mexico", "argentina", "chile", "colombia",
+        "egypt", "kenya", "morocco", "tunisia", "algeria",
+    }
+    
+    before_countries = len(filtered)
+    filtered = [
+        kw for kw in filtered
+        if not any(country in kw.get("keyword", "").lower() for country in excluded_countries)
+    ]
+    countries_removed = before_countries - len(filtered)
+    if countries_removed > 0:
+        logger.info(f"Filtered by irrelevant countries: removed {countries_removed} keywords")
+        print(f"🔍 Irrelevant countries filter: removed {countries_removed} keywords (France, Germany, China, Japan, etc.)")
+    
+    total_removed = original_count - len(filtered)
+    if total_removed > 0:
+        print(f"✅ Total keywords after filtering: {len(filtered)} (removed {total_removed})\n")
+    
+    return filtered
+
+
 def fetch_locations() -> List[Dict]:
     """Fetch Google Ads locations from DataForSEO for English-speaking countries only.
     

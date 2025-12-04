@@ -295,6 +295,23 @@ async def run_keyword_research(
             })
         except Exception as e:
             print(f"⚠️ Failed to track DataForSEO cost: {e}", flush=True)
+        
+        # Filter keywords based on intake data (negative keywords, excluded brands, location relevance)
+        try:
+            from app.services.dataforseo import filter_keywords_by_intake
+            negative_kws = intake.get("negative_keywords", "").strip()
+            excluded_brands = intake.get("excluded_brands", "").strip()
+            
+            print(f"\n📋 Applying multi-stage filters...")
+            raw_output = filter_keywords_by_intake(
+                keywords=raw_output,
+                negative_keywords=negative_kws if negative_kws else None,
+                excluded_brands=excluded_brands if excluded_brands else None,
+                location_name=target_location,  # Pass the target location for relevance filtering
+            )
+        except Exception as e:
+            print(f"⚠️ Local filtering failed: {e}", flush=True)
+            # Continue without filtering if it fails
             
     except Exception as e:
         raise HTTPException(
