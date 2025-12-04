@@ -38,21 +38,66 @@ class BatchRankRequest(BaseModel):
 
 
 def _parse_location(loc: str):
-    """Extract a city and country from a display string like
-    'Auckland (City · NZ)'. Returns tuple (city_name, gl, location_string)
-    where gl is a lowercased country code for Serper and location_string is a
-    human-friendly string that Serper recognizes better, e.g.,
-    'Auckland, Auckland, New Zealand'. If parsing fails, falls back to (loc, None, loc).
+    """Extract a city and country from a location ID or display string.
+    
+    Handles both:
+    1. Location IDs from geo.py (e.g., "1011036" for Auckland)
+    2. Display strings like 'Auckland (City · NZ)'
+    
+    Returns tuple (city_name, gl, location_string) where:
+    - city_name: Short city name
+    - gl: Country code for Serper (lowercase)
+    - location_string: Full location string for Serper API
     """
+    # Mapping of location IDs to Serper-friendly location strings
+    LOCATION_ID_MAP = {
+        # US
+        "1023191": {"name": "New York", "gl": "us", "location": "New York, NY, United States"},
+        "1014044": {"name": "Los Angeles", "gl": "us", "location": "Los Angeles, CA, United States"},
+        "1012728": {"name": "Chicago", "gl": "us", "location": "Chicago, IL, United States"},
+        "1021224": {"name": "Houston", "gl": "us", "location": "Houston, TX, United States"},
+        "1023040": {"name": "Phoenix", "gl": "us", "location": "Phoenix, AZ, United States"},
+        "1025197": {"name": "San Francisco", "gl": "us", "location": "San Francisco, CA, United States"},
+        "1026201": {"name": "Seattle", "gl": "us", "location": "Seattle, WA, United States"},
+        "1013962": {"name": "Miami", "gl": "us", "location": "Miami, FL, United States"},
+        "2840": {"name": "United States", "gl": "us", "location": "United States"},
+        # Canada
+        "9000093": {"name": "Toronto", "gl": "ca", "location": "Toronto, ON, Canada"},
+        "9000071": {"name": "Vancouver", "gl": "ca", "location": "Vancouver, BC, Canada"},
+        "9000040": {"name": "Montreal", "gl": "ca", "location": "Montreal, QC, Canada"},
+        "2124": {"name": "Canada", "gl": "ca", "location": "Canada"},
+        # UK
+        "1006886": {"name": "London", "gl": "gb", "location": "London, United Kingdom"},
+        "1006099": {"name": "Manchester", "gl": "gb", "location": "Manchester, United Kingdom"},
+        "2826": {"name": "United Kingdom", "gl": "gb", "location": "United Kingdom"},
+        # Australia
+        "1000339": {"name": "Sydney", "gl": "au", "location": "Sydney, NSW, Australia"},
+        "1000318": {"name": "Melbourne", "gl": "au", "location": "Melbourne, VIC, Australia"},
+        "1000310": {"name": "Brisbane", "gl": "au", "location": "Brisbane, QLD, Australia"},
+        "2036": {"name": "Australia", "gl": "au", "location": "Australia"},
+        # New Zealand
+        "1011036": {"name": "Auckland", "gl": "nz", "location": "Auckland, New Zealand"},
+        "1001460": {"name": "Wellington", "gl": "nz", "location": "Wellington, New Zealand"},
+        "2554": {"name": "New Zealand", "gl": "nz", "location": "New Zealand"},
+    }
+    
     try:
-        name = loc.strip() if isinstance(loc, str) else ""
+        loc_str = str(loc).strip() if loc else ""
+        
+        # Check if this is a location ID
+        if loc_str in LOCATION_ID_MAP:
+            loc_data = LOCATION_ID_MAP[loc_str]
+            return loc_data["name"], loc_data["gl"], loc_data["location"]
+        
+        # Otherwise parse as display string format: 'Auckland (City · NZ)'
+        name = loc_str
         gl = None
         country_full = None
 
-        if isinstance(loc, str) and ("(" in loc and ")" in loc):
+        if "(" in loc_str and ")" in loc_str:
             # e.g., 'Auckland (City · NZ)'
-            name = loc.split("(", 1)[0].strip()
-            inside = loc.split("(", 1)[1].split(")", 1)[0]
+            name = loc_str.split("(", 1)[0].strip()
+            inside = loc_str.split("(", 1)[1].split(")", 1)[0]
             parts = [p.strip() for p in inside.split("·")]
             if parts:
                 cc = parts[-1].strip().upper()
@@ -69,16 +114,14 @@ def _parse_location(loc: str):
 
         # Fallbacks
         if not name:
-            name = str(loc)
+            name = loc_str
         if not country_full and gl:
-            # naive fallback: use code as-is
             country_full = gl.upper()
 
-        # Construct a richer location string to bias Serper better
-        # Format: "City, City, Country"
+        # Construct location string
         rich_location = name
         if name and country_full:
-            rich_location = f"{name}, {name}, {country_full}"
+            rich_location = f"{name}, {country_full}"
 
         return name, gl, rich_location
     except Exception:
