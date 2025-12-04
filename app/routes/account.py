@@ -42,55 +42,63 @@ def export_research_data(authorization: str | None = Header(default=None)):
         # Create CSV in memory
         output = io.StringIO()
         
-        # Define CSV columns
-        fieldnames = [
-            'research_id',
-            'created_at',
-            'business_name',
-            'target_page_url',
-            'location',
-            'language_code',
-            'target_audience',
-            'suggested_search_terms',
-            'search_intent',
-            'unique_value_proposition',
-            'primary_keywords_count',
-            'secondary_keywords_count',
-            'total_keywords',
-        ]
+        # Collect all keyword results across all research
+        rows = []
         
-        writer = csv.DictWriter(output, fieldnames=fieldnames, extrasaction='ignore')
-        writer.writeheader()
-        
-        # Write research data
         for research in research_list:
-            # Count keywords if available
-            primary_count = 0
-            secondary_count = 0
+            business_name = research.get('businessName', '')
+            created_at = research.get('createdAt', '')
+            location = research.get('location', '')
             
             if 'keywordData' in research and research['keywordData']:
                 kw_data = research['keywordData']
+                
+                # Export primary keywords
                 if 'primary' in kw_data and isinstance(kw_data['primary'], list):
-                    primary_count = len(kw_data['primary'])
+                    for kw in kw_data['primary']:
+                        rows.append({
+                            'business_name': business_name,
+                            'research_date': created_at,
+                            'location': location,
+                            'keyword_type': 'Primary',
+                            'keyword': kw.get('keyword', ''),
+                            'search_volume': kw.get('search_volume', 0),
+                            'competition': kw.get('competition', ''),
+                            'cpc': kw.get('cpc', 0),
+                        })
+                
+                # Export secondary keywords
                 if 'secondary' in kw_data and isinstance(kw_data['secondary'], list):
-                    secondary_count = len(kw_data['secondary'])
-            
-            row = {
-                'research_id': research.get('research_id', ''),
-                'created_at': research.get('createdAt', ''),
-                'business_name': research.get('businessName', ''),
-                'target_page_url': research.get('targetPageUrl', ''),
-                'location': research.get('location', ''),
-                'language_code': research.get('languageCode', ''),
-                'target_audience': research.get('targetAudience', ''),
-                'suggested_search_terms': research.get('suggestedSearchTerms', ''),
-                'search_intent': research.get('searchIntent', ''),
-                'unique_value_proposition': research.get('uniqueValueProposition', ''),
-                'primary_keywords_count': primary_count,
-                'secondary_keywords_count': secondary_count,
-                'total_keywords': primary_count + secondary_count,
-            }
-            writer.writerow(row)
+                    for kw in kw_data['secondary']:
+                        rows.append({
+                            'business_name': business_name,
+                            'research_date': created_at,
+                            'location': location,
+                            'keyword_type': 'Secondary',
+                            'keyword': kw.get('keyword', ''),
+                            'search_volume': kw.get('search_volume', 0),
+                            'competition': kw.get('competition', ''),
+                            'cpc': kw.get('cpc', 0),
+                        })
+        
+        if not rows:
+            raise HTTPException(status_code=404, detail="No keyword results found to export")
+        
+        # Define CSV columns - only keyword results
+        fieldnames = [
+            'business_name',
+            'research_date',
+            'location',
+            'keyword_type',
+            'keyword',
+            'search_volume',
+            'competition',
+            'cpc',
+        ]
+        
+        writer = csv.DictWriter(output, fieldnames=fieldnames)
+        writer.writeheader()
+        writer.writerows(rows)
         
         # Prepare response
         output.seek(0)
