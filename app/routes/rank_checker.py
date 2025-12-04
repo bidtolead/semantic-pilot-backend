@@ -1,5 +1,7 @@
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
+import sqlite3
+import os
 
 from app.services.serper import SerperClient
 from app.services.firestore import db
@@ -7,6 +9,9 @@ from google.cloud import firestore as gcf
 
 
 router = APIRouter(prefix="/rank", tags=["rank"])
+
+# Path to SQLite database
+DB_PATH = os.path.join(os.path.dirname(__file__), "..", "data", "locations.db")
 
 
 
@@ -49,45 +54,57 @@ def _parse_location(loc: str):
     - gl: Country code for Serper (lowercase)
     - location_string: Full location string for Serper API
     """
-    # Mapping of location IDs to Serper-friendly location strings
-    LOCATION_ID_MAP = {
-        # US
-        "1023191": {"name": "New York", "gl": "us", "location": "New York, NY, United States"},
-        "1014044": {"name": "Los Angeles", "gl": "us", "location": "Los Angeles, CA, United States"},
-        "1012728": {"name": "Chicago", "gl": "us", "location": "Chicago, IL, United States"},
-        "1021224": {"name": "Houston", "gl": "us", "location": "Houston, TX, United States"},
-        "1023040": {"name": "Phoenix", "gl": "us", "location": "Phoenix, AZ, United States"},
-        "1025197": {"name": "San Francisco", "gl": "us", "location": "San Francisco, CA, United States"},
-        "1026201": {"name": "Seattle", "gl": "us", "location": "Seattle, WA, United States"},
-        "1013962": {"name": "Miami", "gl": "us", "location": "Miami, FL, United States"},
-        "2840": {"name": "United States", "gl": "us", "location": "United States"},
-        # Canada
-        "9000093": {"name": "Toronto", "gl": "ca", "location": "Toronto, ON, Canada"},
-        "9000071": {"name": "Vancouver", "gl": "ca", "location": "Vancouver, BC, Canada"},
-        "9000040": {"name": "Montreal", "gl": "ca", "location": "Montreal, QC, Canada"},
-        "2124": {"name": "Canada", "gl": "ca", "location": "Canada"},
-        # UK
-        "1006886": {"name": "London", "gl": "gb", "location": "London, United Kingdom"},
-        "1006099": {"name": "Manchester", "gl": "gb", "location": "Manchester, United Kingdom"},
-        "2826": {"name": "United Kingdom", "gl": "gb", "location": "United Kingdom"},
-        # Australia
-        "1000339": {"name": "Sydney", "gl": "au", "location": "Sydney, NSW, Australia"},
-        "1000318": {"name": "Melbourne", "gl": "au", "location": "Melbourne, VIC, Australia"},
-        "1000310": {"name": "Brisbane", "gl": "au", "location": "Brisbane, QLD, Australia"},
-        "2036": {"name": "Australia", "gl": "au", "location": "Australia"},
-        # New Zealand
-        "1011036": {"name": "Auckland", "gl": "nz", "location": "Auckland, New Zealand"},
-        "1001460": {"name": "Wellington", "gl": "nz", "location": "Wellington, New Zealand"},
-        "2554": {"name": "New Zealand", "gl": "nz", "location": "New Zealand"},
-    }
-    
     try:
         loc_str = str(loc).strip() if loc else ""
         
-        # Check if this is a location ID
-        if loc_str in LOCATION_ID_MAP:
-            loc_data = LOCATION_ID_MAP[loc_str]
-            return loc_data["name"], loc_data["gl"], loc_data["location"]
+        # Check if this is a location ID (numeric string)
+        if loc_str.isdigit():
+            # Look up in database
+            conn = sqlite3.connect(DB_PATH)
+            cursor = conn.cursor()
+            cursor.execute(
+                "SELECT location_name, country_iso_code FROM locations WHERE location_code = ?",
+                (int(loc_str),)
+            )
+            row = cursor.fetchone()
+            conn.close()
+            
+            if row:
+                location_name, country_code = row
+                gl = country_code.lower()
+                
+                # Map country code to full name for location string
+                COUNTRY_MAP = {
+                    "NZ": "New Zealand",
+                    "AU": "Australia",
+                    "US": "United States",
+                    "GB": "United Kingdom",
+                    "CA": "Canada",
+                    "IN": "India",
+                    "PH": "Philippines",
+                    "SG": "Singapore",
+                    "AE": "United Arab Emirates",
+                    "IL": "Israel",
+                    "ZA": "South Africa",
+                    "NG": "Nigeria",
+                    "IE": "Ireland",
+                    "MY": "Malaysia",
+                    "PK": "Pakistan",
+                    "KE": "Kenya",
+                    "GH": "Ghana",
+                }
+                country_full = COUNTRY_MAP.get(country_code, country_code)
+                
+                # Build Serper-friendly location string
+                # For cities, use "City, Country" format
+                # For countries, just use country name
+                if "," in location_name:
+                    # Location name already has format like "Auckland,New Zealand"
+                    rich_location = location_name.replace(",", ", ")
+                else:
+                    rich_location = f"{location_name}, {country_full}"
+                
+                return location_name.split(",")[0], gl, rich_location
         
         # Otherwise parse as display string format: 'Auckland (City · NZ)'
         name = loc_str

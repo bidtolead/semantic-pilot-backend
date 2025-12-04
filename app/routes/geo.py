@@ -1,53 +1,47 @@
 from fastapi import APIRouter, HTTPException, Query
 from typing import List, Dict, Any
+import sqlite3
+import os
 
 router = APIRouter(prefix="/geo", tags=["Geo"])
 
-# Hardcoded major cities to avoid memory issues with DataForSEO's 100k+ locations
-# This is a temporary solution until we can properly handle the large dataset
-HARDCODED_LOCATIONS = [
-    # US
-    {"id": "1023191", "name": "New York, NY, United States", "countryCode": "US", "targetType": "City"},
-    {"id": "1014044", "name": "Los Angeles, CA, United States", "countryCode": "US", "targetType": "City"},
-    {"id": "1012728", "name": "Chicago, IL, United States", "countryCode": "US", "targetType": "City"},
-    {"id": "1021224", "name": "Houston, TX, United States", "countryCode": "US", "targetType": "City"},
-    {"id": "1023040", "name": "Phoenix, AZ, United States", "countryCode": "US", "targetType": "City"},
-    {"id": "1025197", "name": "San Francisco, CA, United States", "countryCode": "US", "targetType": "City"},
-    {"id": "1026201", "name": "Seattle, WA, United States", "countryCode": "US", "targetType": "City"},
-    {"id": "1013962", "name": "Miami, FL, United States", "countryCode": "US", "targetType": "City"},
-    {"id": "2840", "name": "United States", "countryCode": "US", "targetType": "Country"},
-    
-    # Canada
-    {"id": "9000093", "name": "Toronto, ON, Canada", "countryCode": "CA", "targetType": "City"},
-    {"id": "9000071", "name": "Vancouver, BC, Canada", "countryCode": "CA", "targetType": "City"},
-    {"id": "9000040", "name": "Montreal, QC, Canada", "countryCode": "CA", "targetType": "City"},
-    {"id": "2124", "name": "Canada", "countryCode": "CA", "targetType": "Country"},
-    
-    # UK
-    {"id": "1006886", "name": "London, United Kingdom", "countryCode": "GB", "targetType": "City"},
-    {"id": "1006099", "name": "Manchester, United Kingdom", "countryCode": "GB", "targetType": "City"},
-    {"id": "2826", "name": "United Kingdom", "countryCode": "GB", "targetType": "Country"},
-    
-    # Australia  
-    {"id": "1000339", "name": "Sydney NSW, Australia", "countryCode": "AU", "targetType": "City"},
-    {"id": "1000318", "name": "Melbourne VIC, Australia", "countryCode": "AU", "targetType": "City"},
-    {"id": "1000310", "name": "Brisbane QLD, Australia", "countryCode": "AU", "targetType": "City"},
-    {"id": "2036", "name": "Australia", "countryCode": "AU", "targetType": "Country"},
-    
-    # New Zealand
-    {"id": "1011036", "name": "Auckland, New Zealand", "countryCode": "NZ", "targetType": "City"},
-    {"id": "1001460", "name": "Wellington, New Zealand", "countryCode": "NZ", "targetType": "City"},
-    {"id": "2554", "name": "New Zealand", "countryCode": "NZ", "targetType": "Country"},
-]
+# Path to SQLite database
+DB_PATH = os.path.join(os.path.dirname(__file__), "..", "data", "locations.db")
 
 @router.get("/locations")
-def get_all_locations():
-    """Get hardcoded locations to avoid memory issues.
+def get_all_locations(limit: int = Query(default=1000, ge=1, le=5000)):
+    """Get all available locations from database.
     
-    Returns a curated list of major cities in English-speaking countries.
-    This avoids loading 100k+ locations from DataForSEO which crashes the 512MB server.
+    Returns locations from SQLite database.
+    Use limit parameter to control how many locations to return.
+    Default is 1000 for reasonable response size.
     """
-    return {"items": HARDCODED_LOCATIONS}
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    
+    cursor.execute(
+        """
+        SELECT location_code, location_name, country_iso_code, location_type
+        FROM locations
+        ORDER BY location_name
+        LIMIT ?
+        """,
+        (limit,)
+    )
+    
+    items = [
+        {
+            "id": str(row[0]),
+            "name": row[1],
+            "countryCode": row[2],
+            "targetType": row[3]
+        }
+        for row in cursor.fetchall()
+    ]
+    
+    conn.close()
+    
+    return {"items": items}
 
 
 @router.get("/suggest")
@@ -57,31 +51,44 @@ def suggest_geo_targets(
 ):
     """Search locations by query string.
     
-    Searches hardcoded location list server-side.
-    Returns max 50 results by default.
+    Searches SQLite database for matching locations.
+    Returns max 50 results by default, sorted by relevance.
     """
     q = q.strip()
     if not q:
         raise HTTPException(status_code=400, detail="Query must not be empty")
     
-    # Get hardcoded locations
-    all_locs = HARDCODED_LOCATIONS
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
     
-    # Filter to matching names
-    query_lower = q.lower()
-    results = [loc for loc in all_locs if query_lower in loc["name"].lower()]
+    # Case-insensitive search with LIKE, prioritize exact/starts-with matches
+    # Use CASE to sort: exact match first, then starts-with, then contains
+    cursor.execute(
+        """
+        SELECT location_code, location_name, country_iso_code, location_type,
+               CASE
+                   WHEN LOWER(location_name) = LOWER(?) THEN 0
+                   WHEN LOWER(location_name) LIKE LOWER(?) THEN 1
+                   ELSE 2
+               END AS priority
+        FROM locations
+        WHERE location_name LIKE ?
+        ORDER BY priority, location_name
+        LIMIT ?
+        """,
+        (q, f"{q}%", f"%{q}%", limit)
+    )
     
-    # Sort by relevance: exact matches first, then starts-with, then contains
-    def sort_key(item):
-        name_lower = item["name"].lower()
-        if name_lower == query_lower:
-            return (0, name_lower)
-        elif name_lower.startswith(query_lower):
-            return (1, name_lower)
-        else:
-            return (2, name_lower)
+    items = [
+        {
+            "id": str(row[0]),
+            "name": row[1],
+            "countryCode": row[2],
+            "targetType": row[3]
+        }
+        for row in cursor.fetchall()
+    ]
     
-    results.sort(key=sort_key)
+    conn.close()
     
-    # Limit results
-    return {"items": results[:limit]}
+    return {"items": items}
