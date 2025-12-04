@@ -32,8 +32,6 @@ def export_research_data(authorization: str | None = Header(default=None)):
         research_subcollection = db.collection("users").document(uid).collection("research")
         research_docs = list(research_subcollection.stream())
         
-        print(f"🔍 Found {len(research_docs)} research documents in users/{uid}/research")
-        
         # Collect all keyword results
         rows = []
         
@@ -42,9 +40,7 @@ def export_research_data(authorization: str | None = Header(default=None)):
             intake_id = research_doc.id
             research_metadata = research_doc.to_dict() or {}
             
-            print(f"📋 Processing research {intake_id}")
-            
-            # Get the research intake data for metadata
+            # Get metadata from research_intakes or from the subcollection doc itself
             intake_ref = db.collection("research_intakes").document(intake_id)
             intake_snap = intake_ref.get()
             intake_data = intake_snap.to_dict() or {} if intake_snap.exists else {}
@@ -53,21 +49,23 @@ def export_research_data(authorization: str | None = Header(default=None)):
             created_at = intake_data.get('createdAt', research_metadata.get('createdAt', ''))
             location = intake_data.get('location', research_metadata.get('location', ''))
             
-            # Get keyword results for this intake
-            results_ref = db.collection("keyword_research_results").document(intake_id)
-            results_snap = results_ref.get()
+            # Get keyword results from intakes/{userId}/{intakeId}/keyword_research
+            keyword_research_ref = (
+                db.collection("intakes")
+                .document(uid)
+                .collection(intake_id)
+                .document("keyword_research")
+            )
+            keyword_research_snap = keyword_research_ref.get()
             
-            if not results_snap.exists:
-                print(f"⚠️  No keyword_research_results found for {intake_id}")
+            if not keyword_research_snap.exists:
                 continue
                 
-            research_data = results_snap.to_dict() or {}
-            print(f"✅ Found research_data with keys: {list(research_data.keys())}")
+            research_data = keyword_research_snap.to_dict() or {}
             
-            # Extract keywords from research_data
-            if 'primary' in research_data and isinstance(research_data['primary'], list):
-                print(f"   Primary keywords: {len(research_data['primary'])}")
-                for kw in research_data['primary']:
+            # Extract keywords from research_data (note: using primary_keywords with underscore)
+            if 'primary_keywords' in research_data and isinstance(research_data['primary_keywords'], list):
+                for kw in research_data['primary_keywords']:
                     if isinstance(kw, dict):
                         rows.append({
                             'business_name': business_name,
@@ -80,9 +78,8 @@ def export_research_data(authorization: str | None = Header(default=None)):
                             'cpc': kw.get('cpc', 0),
                         })
             
-            if 'secondary' in research_data and isinstance(research_data['secondary'], list):
-                print(f"   Secondary keywords: {len(research_data['secondary'])}")
-                for kw in research_data['secondary']:
+            if 'secondary_keywords' in research_data and isinstance(research_data['secondary_keywords'], list):
+                for kw in research_data['secondary_keywords']:
                     if isinstance(kw, dict):
                         rows.append({
                             'business_name': business_name,
@@ -94,8 +91,21 @@ def export_research_data(authorization: str | None = Header(default=None)):
                             'competition': kw.get('competition', ''),
                             'cpc': kw.get('cpc', 0),
                         })
-        
-        print(f"📊 Total rows collected: {len(rows)}")
+            
+            # Also include long-tail keywords
+            if 'long_tail_keywords' in research_data and isinstance(research_data['long_tail_keywords'], list):
+                for kw in research_data['long_tail_keywords']:
+                    if isinstance(kw, dict):
+                        rows.append({
+                            'business_name': business_name,
+                            'research_date': created_at,
+                            'location': location,
+                            'keyword_type': 'Long-tail',
+                            'keyword': kw.get('keyword', ''),
+                            'search_volume': kw.get('search_volume', 0),
+                            'competition': kw.get('competition', ''),
+                            'cpc': kw.get('cpc', 0),
+                        })
         
         if not rows:
             raise HTTPException(status_code=404, detail="No keyword results found to export")

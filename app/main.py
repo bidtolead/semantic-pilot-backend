@@ -20,6 +20,7 @@ from app.routes.payments import router as payments_router
 from app.routes.reviews import router as reviews_router
 from app.routes.email import router as email_router
 from app.routes.notifications import router as notifications_router
+from app.routes.support import router as support_router
 
 # ⭐ CORRECT Google Ads Location Search Router
 from app.routes.geo import router as geo_router
@@ -81,6 +82,9 @@ app.include_router(payments_router)
 app.include_router(reviews_router)
 app.include_router(email_router)
 app.include_router(notifications_router)
+
+# Support and issue reporting endpoints
+app.include_router(support_router)
 
 # Heartbeat for tracking user activity
 app.include_router(activity_router)
