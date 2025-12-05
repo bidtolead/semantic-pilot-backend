@@ -44,6 +44,39 @@ def get_all_locations(limit: int = Query(default=1000, ge=1, le=5000)):
     return {"items": items}
 
 
+@router.get("/location/{location_id}")
+def get_location_by_id(location_id: str):
+    """Get location details by ID.
+    
+    Returns location information for a specific location code.
+    """
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    
+    cursor.execute(
+        """
+        SELECT location_code, location_name, country_iso_code, location_type
+        FROM locations
+        WHERE location_code = ?
+        LIMIT 1
+        """,
+        (location_id,)
+    )
+    
+    row = cursor.fetchone()
+    conn.close()
+    
+    if not row:
+        raise HTTPException(status_code=404, detail="Location not found")
+    
+    return {
+        "id": str(row[0]),
+        "name": row[1],
+        "countryCode": row[2],
+        "targetType": row[3]
+    }
+
+
 @router.get("/suggest")
 def suggest_geo_targets(
     q: str = Query(..., min_length=2, max_length=80),

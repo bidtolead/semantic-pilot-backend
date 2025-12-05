@@ -252,8 +252,8 @@ def generate_meta_tags(
     
     # Payload for Firestore (includes SERVER_TIMESTAMP)
     firestore_payload = {
-        "page_title": result_json.get("page_title", ""),
-        "meta_description": result_json.get("meta_description", ""),
+        "page_title_variations": result_json.get("page_title_variations", []),
+        "meta_description_variations": result_json.get("meta_description_variations", []),
         "notes": result_json.get("notes", {}),
         "token_usage": token_usage,
         "status": "completed",
@@ -275,9 +275,9 @@ def generate_meta_tags(
     
     # Return payload without SERVER_TIMESTAMP sentinel
     return {
-        "page_title": result_json.get("page_title"),
-        "meta_description": result_json.get("meta_description"),
-        "notes": result_json.get("notes"),
+        "page_title_variations": result_json.get("page_title_variations", []),
+        "meta_description_variations": result_json.get("meta_description_variations", []),
+        "notes": result_json.get("notes", {}),
         "token_usage": token_usage,
         "status": "completed",
     }
