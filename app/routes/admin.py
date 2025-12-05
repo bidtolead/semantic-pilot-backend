@@ -230,6 +230,28 @@ def remove_admin(uid: str, authorization: str | None = Header(default=None)):
 
 
 # -----------------------------------------------------
+# 📌 Make Tester by Email
+# -----------------------------------------------------
+@router.post("/make-tester-by-email")
+def make_tester_by_email(email: str, authorization: str | None = Header(default=None)):
+    require_admin(authorization)
+
+    try:
+        # Get user by email using Firebase Auth
+        user = firebase_auth.get_user_by_email(email)
+        uid = user.uid
+        
+        # Update user role to tester in Firestore
+        db.collection("users").document(uid).update({"role": "tester"})
+        
+        return {"status": "success", "message": f"User {email} promoted to tester", "uid": uid}
+    except firebase_auth.UserNotFoundError:
+        raise HTTPException(status_code=404, detail=f"User with email {email} not found")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error: {str(e)}")
+
+
+# -----------------------------------------------------
 # 📌 Ban User
 # -----------------------------------------------------
 @router.post("/user/{uid}/ban")
