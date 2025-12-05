@@ -292,6 +292,156 @@ async def handle_page_content(
         raise HTTPException(status_code=500, detail=str(e))
 
 
+# POST endpoints for direct content generation (used by frontend)
+@router.post("/page-content/")
+async def generate_page_content_post(request: Request):
+    """Generate page content directly from frontend request"""
+    user_data = await verify_token(request)
+    user_id = user_data.get("uid")
+    
+    try:
+        body = await request.json()
+        primary_keywords = body.get("primary_keywords", [])
+        secondary_keywords = body.get("secondary_keywords", [])
+        long_tail_keywords = body.get("long_tail_keywords", [])
+        user_intake_form = body.get("user_intake_form", {})
+        research_data = body.get("research_data", {})
+        
+        # Check if user is admin
+        user_role = user_data.get("role", "user")
+        if user_role != "admin":
+            # For regular users, check credits
+            user_doc = db.collection("users").document(user_id).get()
+            if not user_doc.exists():
+                raise HTTPException(status_code=404, detail="User not found")
+            
+            credits = user_doc.get("credits") or 0
+            if credits < 1:
+                raise HTTPException(status_code=402, detail="Insufficient credits. Please purchase more credits.")
+            
+            # Deduct 1 credit
+            db.collection("users").document(user_id).update({
+                "credits": gcfirestore.Increment(-1)
+            })
+        
+        result = generate_page_content(
+            primary_keywords=primary_keywords,
+            secondary_keywords=secondary_keywords,
+            long_tail_keywords=long_tail_keywords,
+            user_intake_form=user_intake_form,
+            research_data=research_data,
+            user_id=user_id,
+        )
+        
+        return {
+            "status": "success",
+            "data": result,
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/blog-ideas/")
+async def generate_blog_ideas_post(request: Request):
+    """Generate blog ideas directly from frontend request"""
+    user_data = await verify_token(request)
+    user_id = user_data.get("uid")
+    
+    try:
+        body = await request.json()
+        primary_keywords = body.get("primary_keywords", [])
+        user_intake_form = body.get("user_intake_form", {})
+        research_data = body.get("research_data", {})
+        
+        # Check if user is admin
+        user_role = user_data.get("role", "user")
+        if user_role != "admin":
+            # For regular users, check credits
+            user_doc = db.collection("users").document(user_id).get()
+            if not user_doc.exists():
+                raise HTTPException(status_code=404, detail="User not found")
+            
+            credits = user_doc.get("credits") or 0
+            if credits < 1:
+                raise HTTPException(status_code=402, detail="Insufficient credits. Please purchase more credits.")
+            
+            # Deduct 1 credit
+            db.collection("users").document(user_id).update({
+                "credits": gcfirestore.Increment(-1)
+            })
+        
+        result = generate_blog_ideas(
+            primary_keywords=primary_keywords,
+            user_intake_form=user_intake_form,
+            research_data=research_data,
+            user_id=user_id,
+        )
+        
+        return {
+            "status": "success",
+            "data": result,
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/meta-tags/")
+async def generate_meta_tags_post(request: Request):
+    """Generate meta tags directly from frontend request"""
+    user_data = await verify_token(request)
+    user_id = user_data.get("uid")
+    
+    try:
+        body = await request.json()
+        primary_keywords = body.get("primary_keywords", [])
+        secondary_keywords = body.get("secondary_keywords", [])
+        long_tail_keywords = body.get("long_tail_keywords", [])
+        user_intake_form = body.get("user_intake_form", {})
+        research_data = body.get("research_data", {})
+        
+        # Check if user is admin
+        user_role = user_data.get("role", "user")
+        if user_role != "admin":
+            # For regular users, check credits
+            user_doc = db.collection("users").document(user_id).get()
+            if not user_doc.exists():
+                raise HTTPException(status_code=404, detail="User not found")
+            
+            credits = user_doc.get("credits") or 0
+            if credits < 1:
+                raise HTTPException(status_code=402, detail="Insufficient credits. Please purchase more credits.")
+            
+            # Deduct 1 credit
+            db.collection("users").document(user_id).update({
+                "credits": gcfirestore.Increment(-1)
+            })
+        
+        result = generate_meta_tags(
+            primary_keywords=primary_keywords,
+            secondary_keywords=secondary_keywords,
+            long_tail_keywords=long_tail_keywords,
+            user_intake_form=user_intake_form,
+            research_data=research_data,
+            user_id=user_id,
+        )
+        
+        return {
+            "status": "success",
+            "data": result,
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @router.get("/ad-copy/{user_id}/{research_id}")
 @limiter.limit("20/hour")
 async def handle_ad_copy(
