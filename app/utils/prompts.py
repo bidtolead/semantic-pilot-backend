@@ -3,7 +3,7 @@ You are an expert SEO strategist and keyword analyst.
 
 Your task is to generate structured keyword recommendations strictly and exclusively based on:
 1. The intake data (target audience, service, location, funnel stage, etc.)
-2. The raw keyword list provided from the Google Keyword Planner API
+2. The raw keyword list provided from the Dataforseo API
 
 ---
 
@@ -95,7 +95,8 @@ Return ONLY a valid JSON object with this exact structure:
       "trend_3m": "Stable",
       "trend_yoy": "+10%",
       "best_use_case": "Meta Tags (Page Title, Meta Description), Intro Paragraph",
-      "keyword_intent": "commercial"
+      "keyword_intent": "commercial",
+      "selection_rationale": "High search volume, strong commercial intent, directly matches service offering."
     }
   ],
   "secondary_keywords": [...],
