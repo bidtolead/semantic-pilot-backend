@@ -29,24 +29,16 @@ def get_user_id(request: Request) -> str:
 
 
 @router.get("/blog-ideas/{user_id}/{research_id}")
-@limiter.limit("20/hour")  # Max 20 content generations per hour per IP
 async def handle_blog_ideas(
-    request: Request,
     user_id: str,
     research_id: str,
     token_data: dict = Depends(verify_token),
     generate: bool = Query(default=True, description="Generate new ideas if true, otherwise just retrieve"),
 ):
-    """Generate or retrieve blog ideas based on intake and keywords. ADMIN ONLY. Rate limited: 20/hour."""
+    """Generate or retrieve blog ideas based on intake and keywords."""
     
-    # Verify admin access AND user owns this research
-    uid = token_data["uid"]
-    user_ref = db.collection("users").document(uid)
-    user_doc = user_ref.get()
-    if not user_doc.exists or user_doc.to_dict().get("role") != "admin":
-        raise HTTPException(status_code=403, detail="Admin access required")
-    
-    if uid != user_id:
+    # Verify user owns this research
+    if token_data["uid"] != user_id:
         raise HTTPException(status_code=403, detail="Not authorized")
     
     try:
@@ -54,12 +46,23 @@ async def handle_blog_ideas(
         doc_ref = db.collection("intakes").document(user_id).collection(research_id).document("blog_ideas")
         doc = doc_ref.get()
         
-        # If exists and not forcing regeneration, return existing
-        if doc.exists and not generate:
-            return {
-                "status": "success",
-                "data": doc.to_dict(),
-            }
+        # If exists and has valid data, return existing
+        if doc.exists:
+            data = doc.to_dict()
+            # Check if data actually has content (not just empty arrays)
+            has_ideas = isinstance(data.get("ideas"), list) and len(data.get("ideas", [])) > 0
+            
+            if has_ideas:
+                print(f"[BlogIdeas] Returning existing blog ideas for {research_id}")
+                return {
+                    "status": "success",
+                    "data": data,
+                }
+            else:
+                print(f"[BlogIdeas] Blog ideas exist but are empty, regenerating for {research_id}")
+        
+        # Only generate if they don't exist or are empty
+        print(f"[BlogIdeas] Generating blog ideas for {research_id}")
         
         # Check user credits before generating new content
         user_ref = db.collection("users").document(user_id)
