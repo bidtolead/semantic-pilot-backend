@@ -9,6 +9,7 @@ from app.utils.content_prompt import CONTENT_PROMPT
 from app.utils.google_ads_ad_copy_prompt import GOOGLE_ADS_AD_COPY_PROMPT
 from app.utils.google_ads_landing_page_prompt import GOOGLE_ADS_LANDING_PAGE_PROMPT
 from app.utils.google_ads_negative_keywords_prompt import GOOGLE_ADS_NEGATIVE_KEYWORDS_PROMPT
+from app.utils.google_ads_structure_prompt import GOOGLE_ADS_STRUCTURE_PROMPT
 from app.utils.cost_calculator import calculate_openai_cost
 
 # Lazy initialize OpenAI client
@@ -706,6 +707,94 @@ def generate_google_ads_negative_keywords(
         .document(user_id)
         .collection(research_id)
         .document("negative_keywords")
+    )
+    
+    firestore_payload = {
+        **result_json,
+        "token_usage": token_usage,
+        "status": "completed",
+        "createdAt": gcfirestore.SERVER_TIMESTAMP,
+    }
+    
+    doc_ref.set(firestore_payload)
+    _update_user_metrics(user_id, token_usage, cost, model)
+    
+    return {
+        **result_json,
+        "token_usage": token_usage,
+        "status": "completed",
+    }
+
+def generate_google_ads_structure(
+    *,
+    intake: Dict[str, Any],
+    keywords: Dict[str, List[Dict[str, Any]]],
+    user_id: str,
+    research_id: str,
+) -> Dict[str, Any]:
+    """Generate Google Ads campaign structure."""
+    
+    final_keywords = {
+        "primary_keywords": keywords.get("primary_keywords", []),
+        "secondary_keywords": keywords.get("secondary_keywords", []),
+        "long_tail_keywords": keywords.get("long_tail_keywords", []),
+        "deleted_keywords": keywords.get("deleted_keywords", []),
+    }
+    
+    prompt = GOOGLE_ADS_STRUCTURE_PROMPT.replace(
+        "{user_intake_form}",
+        json.dumps(intake, ensure_ascii=False, indent=2, default=_json_default),
+    ).replace(
+        "{final_keywords}",
+        json.dumps(final_keywords, ensure_ascii=False, indent=2, default=_json_default),
+    )
+    
+    model = os.getenv("OPENAI_MODEL") or _get_model_from_settings()
+    
+    try:
+        response = get_openai_client().chat.completions.create(
+            model=model,
+            temperature=0,
+            response_format={"type": "json_object"},
+            messages=[
+                {
+                    "role": "system",
+                    "content": "You are an expert Google Ads campaign strategist. Always return strictly valid JSON.",
+                },
+                {"role": "user", "content": prompt},
+            ],
+        )
+    except Exception as e:
+        raise RuntimeError(f"OpenAI API request failed: {e}")
+    
+    if not response.choices:
+        raise RuntimeError("OpenAI returned no choices")
+    
+    token_usage = {
+        "prompt_tokens": getattr(response.usage, "prompt_tokens", 0) if response.usage else 0,
+        "completion_tokens": getattr(response.usage, "completion_tokens", 0) if response.usage else 0,
+        "total_tokens": getattr(response.usage, "total_tokens", 0) if response.usage else 0,
+    }
+    
+    cost = calculate_openai_cost(
+        prompt_tokens=token_usage["prompt_tokens"],
+        completion_tokens=token_usage["completion_tokens"],
+        model=model
+    )
+    token_usage["estimated_cost_usd"] = cost
+    
+    content = response.choices[0].message.content
+    try:
+        result_json = json.loads(content)
+    except json.JSONDecodeError as e:
+        snippet = content[:300]
+        raise ValueError(f"Invalid JSON from model: {e}: {snippet}")
+    
+    doc_ref = (
+        db.collection("intakes")
+        .document(user_id)
+        .collection(research_id)
+        .document("structure")
     )
     
     firestore_payload = {
