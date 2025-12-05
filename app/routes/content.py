@@ -59,19 +59,22 @@ async def handle_blog_ideas(
         
         user_data = user_snapshot.to_dict() or {}
         current_credits = user_data.get("credits", 0)
+        user_role = user_data.get("role", "user")
         
-        # Check if user has enough credits (1 credit per content generation)
-        if current_credits < 1:
-            raise HTTPException(
-                status_code=402,
-                detail="Insufficient credits. Please contact support to add more credits."
-            )
-        
-        # Deduct 1 credit
-        user_ref.update({
-            "credits": gcfirestore.Increment(-1),
-            "lastActivity": gcfirestore.SERVER_TIMESTAMP,
-        })
+        # Skip credit check for admin users
+        if user_role != "admin":
+            # Check if user has enough credits (1 credit per content generation)
+            if current_credits < 1:
+                raise HTTPException(
+                    status_code=402,
+                    detail="Insufficient credits. Please contact support to add more credits."
+                )
+            
+            # Deduct 1 credit
+            user_ref.update({
+                "credits": gcfirestore.Increment(-1),
+                "lastActivity": gcfirestore.SERVER_TIMESTAMP,
+            })
         
         # Generate new blog ideas
         doc_id = f"{user_id}_{research_id}"
@@ -145,19 +148,22 @@ async def handle_meta_tags(
         
         user_data = user_snapshot.to_dict() or {}
         current_credits = user_data.get("credits", 0)
+        user_role = user_data.get("role", "user")
         
-        # Check if user has enough credits (1 credit per content generation)
-        if current_credits < 1:
-            raise HTTPException(
-                status_code=402,
-                detail="Insufficient credits. Please contact support to add more credits."
-            )
-        
-        # Deduct 1 credit
-        user_ref.update({
-            "credits": gcfirestore.Increment(-1),
-            "lastActivity": gcfirestore.SERVER_TIMESTAMP,
-        })
+        # Skip credit check for admin users
+        if user_role != "admin":
+            # Check if user has enough credits (1 credit per content generation)
+            if current_credits < 1:
+                raise HTTPException(
+                    status_code=402,
+                    detail="Insufficient credits. Please contact support to add more credits."
+                )
+            
+            # Deduct 1 credit
+            user_ref.update({
+                "credits": gcfirestore.Increment(-1),
+                "lastActivity": gcfirestore.SERVER_TIMESTAMP,
+            })
         
         # Generate new meta tags
         doc_id = f"{user_id}_{research_id}"
@@ -231,19 +237,22 @@ async def handle_page_content(
         
         user_data = user_snapshot.to_dict() or {}
         current_credits = user_data.get("credits", 0)
+        user_role = user_data.get("role", "user")
         
-        # Check if user has enough credits (1 credit per content generation)
-        if current_credits < 1:
-            raise HTTPException(
-                status_code=402,
-                detail="Insufficient credits. Please contact support to add more credits."
-            )
-        
-        # Deduct 1 credit
-        user_ref.update({
-            "credits": gcfirestore.Increment(-1),
-            "lastActivity": gcfirestore.SERVER_TIMESTAMP,
-        })
+        # Skip credit check for admin users
+        if user_role != "admin":
+            # Check if user has enough credits (1 credit per content generation)
+            if current_credits < 1:
+                raise HTTPException(
+                    status_code=402,
+                    detail="Insufficient credits. Please contact support to add more credits."
+                )
+            
+            # Deduct 1 credit
+            user_ref.update({
+                "credits": gcfirestore.Increment(-1),
+                "lastActivity": gcfirestore.SERVER_TIMESTAMP,
+            })
         
         # Generate new page content
         doc_id = f"{user_id}_{research_id}"
