@@ -143,12 +143,16 @@ async def handle_meta_tags(
         doc_ref = db.collection("intakes").document(user_id).collection(research_id).document("meta_tags")
         doc = doc_ref.get()
         
-        # If exists and not forcing regeneration, return existing
-        if doc.exists and not generate:
+        # If exists, return existing (even if generate=True, don't waste credits)
+        if doc.exists:
+            print(f"[MetaTags] Returning existing meta tags for {research_id}")
             return {
                 "status": "success",
                 "data": doc.to_dict(),
             }
+        
+        # Only generate if they don't exist
+        print(f"[MetaTags] Meta tags not found, generating for {research_id}")
         
         # Check user credits before generating new content
         user_ref = db.collection("users").document(user_id)
@@ -202,6 +206,8 @@ async def handle_meta_tags(
             user_id=user_id,
             research_id=research_id,
         )
+        
+        print(f"[MetaTags] Generation complete with {len(result.get('page_title_variations', []))} titles and {len(result.get('meta_description_variations', []))} descriptions")
         
         return {
             "status": "success",
