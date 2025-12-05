@@ -22,11 +22,11 @@ def get_openai_client():
         _client = OpenAI()
     return _client
 
-PROMPT_FALLBACK = None
+# Optional fallback: use existing prompt from utils if available
 try:
-    # Optional fallback: use existing prompt from utils if available
-    from app.utils.prompts import KEYWORD_RESEARCH_PROMPT as PROMPT_FALLBACK
-except Exception:
+    from app.utils.prompts import KEYWORD_RESEARCH_PROMPT
+    PROMPT_FALLBACK = KEYWORD_RESEARCH_PROMPT
+except ImportError:
     PROMPT_FALLBACK = None
 
 
