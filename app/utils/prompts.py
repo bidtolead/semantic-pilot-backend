@@ -54,25 +54,27 @@ Rules:
 
 2) SECONDARY KEYWORDS
 Number depends on word count:
-• 300–500 words → 2–3
-• 600–900 words → 3–5
-• 1000–1500 words → 3–6
-• 2000+ words → 6–10
 
-Press release rule:
+• 150–300 words → 2–3  
+• 300–900 words → 3–4  
+• 1000–1500 words → 4–5  
+• 2000 words → 6–7  
+
+Press Release rule:
 • Always 1–3 secondary keywords max (ignore word count)
 
 ------------------------------------------------
 
 3) LONG-TAIL KEYWORDS
 Number depends on word count:
-• 300–500 words → 3–6
-• 600–900 words → 5–10
-• 1000–1500 words → 8–15
-• 2000+ words → 15–30
 
-Press release rule:
-• 2–5 long-tail keywords max
+• 150–300 words → 3–5  
+• 300–900 words → 5–8  
+• 1000–1500 words → 8–10  
+• 2000 words → 10–15  
+
+Press Release rule:
+• 2–5 long-tail keywords max  
 • Must support topical authority, not hard SEO targeting
 
 ------------------------------------------------
