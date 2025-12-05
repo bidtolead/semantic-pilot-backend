@@ -25,7 +25,7 @@ KEYWORD SELECTION LOGIC
 Relevance = semantic alignment with the product/service description + intent match + location match.
 
 Exclude all keywords that:
-• Contradict the business model (e.g., exclude "online" if service is face-to-face)
+• Contradict the business model (e.g., exclude online if service is face-to-face)
 • Contain blocked brands or negative terms
 • Mismatch the funnel stage (press releases = informational only)
 • Do not match the geographic focus of the intake
@@ -44,6 +44,14 @@ Choose based on page type:
 • Homepage: 1
 • Blog Article: 1
 • Press Release: 1 (never 2)
+
+Additional page types:
+• Case Study: 1 primary keyword (informational/commercial hybrid allowed)
+• About Page: 1 primary keyword (brand + expertise relevance)
+• FAQ Page: 1 primary keyword (informational only)
+• Contact Page: 1 primary keyword (location-driven local SEO keyword)
+• Portfolio Page: 1 primary keyword (service category keyword)
+• Other (user-typed): default to Service Page logic → 1–2 depending on relevance
 
 Rules:
 • Choose the highest relevance + search volume keyword
@@ -141,4 +149,4 @@ Return ONLY one valid JSON object:
 }
 
 CRITICAL: The search_volume value MUST match avg_monthly_searches from the raw keyword data exactly. Do not round, estimate, or modify it.
-"""
+""""
