@@ -451,13 +451,16 @@ async def handle_ad_copy(
     token_data: dict = Depends(verify_token),
     generate: bool = Query(default=True),
 ):
-    """Generate or retrieve Google Ads ad copy. ADMIN ONLY. Rate limited: 20/hour."""
+    """Generate or retrieve Google Ads ad copy. ADMIN AND TESTER. Rate limited: 20/hour."""
     
     uid = token_data["uid"]
     user_ref = db.collection("users").document(uid)
     user_doc = user_ref.get()
-    if not user_doc.exists or user_doc.to_dict().get("role") != "admin":
-        raise HTTPException(status_code=403, detail="Admin access required")
+    user_role = user_doc.to_dict().get("role") if user_doc.exists else None
+    
+    # Allow both admin and tester roles
+    if not user_doc.exists or user_role not in ["admin", "tester"]:
+        raise HTTPException(status_code=403, detail="Admin or Tester access required")
     
     if uid != user_id:
         raise HTTPException(status_code=403, detail="Not authorized")
@@ -517,13 +520,16 @@ async def handle_landing_page(
     token_data: dict = Depends(verify_token),
     generate: bool = Query(default=True),
 ):
-    """Generate or retrieve Google Ads landing page recommendations. ADMIN ONLY. Rate limited: 20/hour."""
+    """Generate or retrieve Google Ads landing page recommendations. ADMIN AND TESTER. Rate limited: 20/hour."""
     
     uid = token_data["uid"]
     user_ref = db.collection("users").document(uid)
     user_doc = user_ref.get()
-    if not user_doc.exists or user_doc.to_dict().get("role") != "admin":
-        raise HTTPException(status_code=403, detail="Admin access required")
+    user_role = user_doc.to_dict().get("role") if user_doc.exists else None
+    
+    # Allow both admin and tester roles
+    if not user_doc.exists or user_role not in ["admin", "tester"]:
+        raise HTTPException(status_code=403, detail="Admin or Tester access required")
     
     if uid != user_id:
         raise HTTPException(status_code=403, detail="Not authorized")
@@ -581,13 +587,16 @@ async def handle_negative_keywords(
     token_data: dict = Depends(verify_token),
     generate: bool = Query(default=True),
 ):
-    """Generate or retrieve negative keyword recommendations. ADMIN ONLY. Rate limited: 20/hour."""
+    """Generate or retrieve negative keyword recommendations. ADMIN AND TESTER. Rate limited: 20/hour."""
     
     uid = token_data["uid"]
     user_ref = db.collection("users").document(uid)
     user_doc = user_ref.get()
-    if not user_doc.exists or user_doc.to_dict().get("role") != "admin":
-        raise HTTPException(status_code=403, detail="Admin access required")
+    user_role = user_doc.to_dict().get("role") if user_doc.exists else None
+    
+    # Allow both admin and tester roles
+    if not user_doc.exists or user_role not in ["admin", "tester"]:
+        raise HTTPException(status_code=403, detail="Admin or Tester access required")
     
     if uid != user_id:
         raise HTTPException(status_code=403, detail="Not authorized")
