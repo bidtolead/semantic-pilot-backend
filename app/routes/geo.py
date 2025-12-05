@@ -88,44 +88,49 @@ def suggest_geo_targets(
 ):
     """Search locations by query string.
     
-    Searches SQLite database for matching locations.
+    Searches locations JSON data for matching locations.
     Returns max 50 results by default, sorted by relevance.
     """
     q = q.strip()
     if not q:
         raise HTTPException(status_code=400, detail="Query must not be empty")
     
-    conn = sqlite3.connect(DB_PATH)
-    cursor = conn.cursor()
+    # Load locations from JSON
+    locations = get_locations_data()
     
-    # Case-insensitive search with LIKE, prioritize exact/starts-with matches
-    # Use CASE to sort: exact match first, then starts-with, then contains
-    cursor.execute(
-        """
-        SELECT location_code, location_name, country_iso_code, location_type,
-               CASE
-                   WHEN LOWER(location_name) = LOWER(?) THEN 0
-                   WHEN LOWER(location_name) LIKE LOWER(?) THEN 1
-                   ELSE 2
-               END AS priority
-        FROM locations
-        WHERE location_name LIKE ?
-        ORDER BY priority, location_name
-        LIMIT ?
-        """,
-        (q, f"{q}%", f"%{q}%", limit)
-    )
+    # Case-insensitive search, prioritize exact/starts-with matches
+    q_lower = q.lower()
+    results = []
     
-    items = [
-        {
-            "id": str(row[0]),
-            "name": row[1],
-            "countryCode": row[2],
-            "targetType": row[3]
-        }
-        for row in cursor.fetchall()
-    ]
+    for loc in locations:
+        name_lower = loc.get("name", "").lower()
+        
+        # Calculate priority: 0=exact, 1=starts-with, 2=contains, 3=no match
+        if name_lower == q_lower:
+            priority = 0
+        elif name_lower.startswith(q_lower):
+            priority = 1
+        elif q_lower in name_lower:
+            priority = 2
+        else:
+            continue  # Skip non-matching
+        
+        results.append({
+            "priority": priority,
+            "item": {
+                "id": str(loc.get("id", "")),
+                "name": loc.get("name", ""),
+                "countryCode": loc.get("countryCode", ""),
+                "targetType": loc.get("targetType", "")
+            }
+        })
     
-    conn.close()
+    # Sort by priority, then by name
+    results.sort(key=lambda x: (x["priority"], x["item"]["name"]))
+    
+    # Return limited results
+    items = [r["item"] for r in results[:limit]]
+    
+    print(f"[GEO] Suggest query '{q}' returned {len(items)} results")
     
     return {"items": items}
