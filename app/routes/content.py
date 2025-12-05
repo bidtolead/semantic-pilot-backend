@@ -16,6 +16,16 @@ from slowapi.util import get_remote_address
 router = APIRouter(prefix="/content", tags=["content"])
 limiter = Limiter(key_func=get_remote_address)
 
+# Per-user rate limit key function
+def get_user_id(request: Request) -> str:
+    """Extract user_id from path for per-user rate limiting."""
+    path_parts = request.url.path.split("/")
+    # /content/ad-copy/{user_id}/{research_id} -> user_id is at index 3
+    if len(path_parts) > 3:
+        return path_parts[3]
+    return "anonymous"
+
+
 
 @router.get("/blog-ideas/{user_id}/{research_id}")
 @limiter.limit("20/hour")  # Max 20 content generations per hour per IP
@@ -443,7 +453,7 @@ async def generate_meta_tags_post(request: Request):
 
 
 @router.get("/ad-copy/{user_id}/{research_id}")
-@limiter.limit("20/hour")
+@limiter.limit("50/hour", key_func=get_user_id)
 async def handle_ad_copy(
     request: Request,
     user_id: str,
@@ -512,7 +522,7 @@ async def handle_ad_copy(
 
 
 @router.get("/landing-page/{user_id}/{research_id}")
-@limiter.limit("20/hour")
+@limiter.limit("50/hour", key_func=get_user_id)
 async def handle_landing_page(
     request: Request,
     user_id: str,
@@ -579,7 +589,7 @@ async def handle_landing_page(
 
 
 @router.get("/negative-keywords/{user_id}/{research_id}")
-@limiter.limit("20/hour")
+@limiter.limit("50/hour", key_func=get_user_id)
 async def handle_negative_keywords(
     request: Request,
     user_id: str,
