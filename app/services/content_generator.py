@@ -404,7 +404,7 @@ def generate_page_content(
     cost = calculate_openai_cost(
         prompt_tokens=token_usage["prompt_tokens"],
         completion_tokens=token_usage["completion_tokens"],
-        model="gpt-4o-mini"
+        model=model
     )
     token_usage["estimated_cost_usd"] = cost
     
@@ -439,7 +439,7 @@ def generate_page_content(
         doc_ref.set(firestore_payload)
     
     # Update user metrics
-    _update_user_metrics(user_id, token_usage, cost)
+    _update_user_metrics(user_id, token_usage, cost, model)
     
     # Return payload without SERVER_TIMESTAMP sentinel
     return {
