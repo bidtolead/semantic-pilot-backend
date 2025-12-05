@@ -62,20 +62,25 @@ OUTPUT FORMAT (JSON only, no markdown)
 ------------------------------------------------
 
 {
-  "titles": [
+  "page_title_variations": [
     {
-      "text": "...",
-      "primary_keyword_used": "...",
-      "character_count": 0
+      "title": "...",
+      "characters": 0,
+      "region_inserted": true
     }
   ],
-  "descriptions": [
+  "meta_description_variations": [
     {
-      "text": "...",
+      "description": "...",
       "keyword_used": "...",
-      "character_count": 0
+      "characters": 0
     }
-  ]
+  ],
+  "notes": {
+    "primary_keyword_used": "...",
+    "secondary_keywords_used": "...",
+    "long_tail_keywords_used": "..."
+  }
 }
 
 Return ONLY valid JSON. No commentary, no explanations, no markdown.
