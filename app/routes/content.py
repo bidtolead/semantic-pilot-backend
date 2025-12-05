@@ -131,6 +131,7 @@ async def handle_meta_tags(
     research_id: str,
     token_data: dict = Depends(verify_token),
     generate: bool = Query(default=True, description="Generate new meta tags if true, otherwise just retrieve"),
+    force: bool = Query(default=False, description="Force regeneration even if data exists"),
 ):
     """Generate or retrieve meta tags based on intake and keywords."""
     
@@ -143,8 +144,11 @@ async def handle_meta_tags(
         doc_ref = db.collection("intakes").document(user_id).collection(research_id).document("meta_tags")
         doc = doc_ref.get()
         
+        # If force=True, always regenerate
+        if force:
+            print(f"[MetaTags] Force regeneration requested for {research_id}")
         # If exists and has valid data, return existing (don't waste credits)
-        if doc.exists:
+        elif doc.exists:
             data = doc.to_dict()
             # Check if data actually has content (not just empty arrays)
             has_titles = isinstance(data.get("page_title_variations"), list) and len(data.get("page_title_variations", [])) > 0
