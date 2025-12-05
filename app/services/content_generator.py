@@ -65,12 +65,32 @@ def _update_user_metrics(user_id: str, token_usage: dict, cost: float, model: st
 
 def generate_blog_ideas(
     *,
-    intake: Dict[str, Any],
-    keywords: Dict[str, List[Dict[str, Any]]],
-    user_id: str,
-    research_id: str,
+    intake: Dict[str, Any] = None,
+    keywords: Dict[str, List[Dict[str, Any]]] = None,
+    user_id: str = None,
+    research_id: str = None,
+    primary_keywords: List[str] = None,
+    secondary_keywords: List[str] = None,
+    long_tail_keywords: List[str] = None,
+    user_intake_form: Dict[str, Any] = None,
+    research_data: Dict[str, Any] = None,
 ) -> Dict[str, Any]:
-    """Generate blog ideas based on intake form and final keywords."""
+    """Generate blog ideas based on intake form and final keywords.
+    
+    Can be called in two ways:
+    1. Old: intake, keywords, user_id, research_id (from GET endpoint)
+    2. New: primary_keywords, secondary_keywords, long_tail_keywords, user_intake_form, user_id (from POST endpoint)
+    """
+    
+    # Handle new POST endpoint calling style
+    if primary_keywords is not None or user_intake_form is not None:
+        intake = user_intake_form or {}
+        keywords = {
+            "primary_keywords": primary_keywords or [],
+            "secondary_keywords": secondary_keywords or [],
+            "long_tail_keywords": long_tail_keywords or [],
+            "deleted_keywords": [],
+        }
     
     # Format keywords for the prompt
     final_keywords = {
@@ -134,35 +154,36 @@ def generate_blog_ideas(
         snippet = content[:300]
         raise ValueError(f"Invalid JSON from model: {e}: {snippet}")
     
-    # Save to Firestore
-    doc_ref = (
-        db.collection("intakes")
-        .document(user_id)
-        .collection(research_id)
-        .document("blog_ideas")
-    )
-    
-    # Payload for Firestore (includes SERVER_TIMESTAMP)
-    firestore_payload = {
-        "blog_ideas": result_json.get("blog_ideas", []),
-        "token_usage": token_usage,
-        "status": "completed",
-        "createdAt": gcfirestore.SERVER_TIMESTAMP,
-    }
-    
-    doc_ref.set(firestore_payload)
+    # Save to Firestore if research_id is provided
+    if research_id:
+        doc_ref = (
+            db.collection("intakes")
+            .document(user_id)
+            .collection(research_id)
+            .document("blog_ideas")
+        )
+        
+        # Payload for Firestore (includes SERVER_TIMESTAMP)
+        firestore_payload = {
+            "blog_ideas": result_json.get("blog_ideas", []),
+            "token_usage": token_usage,
+            "status": "completed",
+            "createdAt": gcfirestore.SERVER_TIMESTAMP,
+        }
+        
+        doc_ref.set(firestore_payload)
+        
+        # Update public stats counter
+        try:
+            blog_count = len(result_json.get("blog_ideas", []))
+            db.collection("system").document("stats").update({
+                "blog_ideas_created": gcfirestore.Increment(blog_count)
+            })
+        except Exception:
+            pass  # Non-critical
     
     # Update user metrics
     _update_user_metrics(user_id, token_usage, cost, model)
-    
-    # Update public stats counter
-    try:
-        blog_count = len(result_json.get("blog_ideas", []))
-        db.collection("system").document("stats").update({
-            "blog_ideas_created": gcfirestore.Increment(blog_count)
-        })
-    except Exception:
-        pass  # Non-critical
     
     # Return payload without SERVER_TIMESTAMP sentinel
     return {
@@ -174,12 +195,32 @@ def generate_blog_ideas(
 
 def generate_meta_tags(
     *,
-    intake: Dict[str, Any],
-    keywords: Dict[str, List[Dict[str, Any]]],
-    user_id: str,
-    research_id: str,
+    intake: Dict[str, Any] = None,
+    keywords: Dict[str, List[Dict[str, Any]]] = None,
+    user_id: str = None,
+    research_id: str = None,
+    primary_keywords: List[str] = None,
+    secondary_keywords: List[str] = None,
+    long_tail_keywords: List[str] = None,
+    user_intake_form: Dict[str, Any] = None,
+    research_data: Dict[str, Any] = None,
 ) -> Dict[str, Any]:
-    """Generate meta tags based on intake form and final keywords."""
+    """Generate meta tags based on intake form and final keywords.
+    
+    Can be called in two ways:
+    1. Old: intake, keywords, user_id, research_id (from GET endpoint)
+    2. New: primary_keywords, secondary_keywords, long_tail_keywords, user_intake_form, user_id (from POST endpoint)
+    """
+    
+    # Handle new POST endpoint calling style
+    if primary_keywords is not None or user_intake_form is not None:
+        intake = user_intake_form or {}
+        keywords = {
+            "primary_keywords": primary_keywords or [],
+            "secondary_keywords": secondary_keywords or [],
+            "long_tail_keywords": long_tail_keywords or [],
+            "deleted_keywords": [],
+        }
     
     # Format keywords for the prompt
     final_keywords = {
@@ -242,36 +283,37 @@ def generate_meta_tags(
         snippet = content[:300]
         raise ValueError(f"Invalid JSON from model: {e}: {snippet}")
     
-    # Save to Firestore
-    doc_ref = (
-        db.collection("intakes")
-        .document(user_id)
-        .collection(research_id)
-        .document("meta_tags")
-    )
-    
-    # Payload for Firestore (includes SERVER_TIMESTAMP)
-    firestore_payload = {
-        "page_title_variations": result_json.get("page_title_variations", []),
-        "meta_description_variations": result_json.get("meta_description_variations", []),
-        "notes": result_json.get("notes", {}),
-        "token_usage": token_usage,
-        "status": "completed",
-        "createdAt": gcfirestore.SERVER_TIMESTAMP,
-    }
-    
-    doc_ref.set(firestore_payload)
+    # Save to Firestore if research_id is provided
+    if research_id:
+        doc_ref = (
+            db.collection("intakes")
+            .document(user_id)
+            .collection(research_id)
+            .document("meta_tags")
+        )
+        
+        # Payload for Firestore (includes SERVER_TIMESTAMP)
+        firestore_payload = {
+            "page_title_variations": result_json.get("page_title_variations", []),
+            "meta_description_variations": result_json.get("meta_description_variations", []),
+            "notes": result_json.get("notes", {}),
+            "token_usage": token_usage,
+            "status": "completed",
+            "createdAt": gcfirestore.SERVER_TIMESTAMP,
+        }
+        
+        doc_ref.set(firestore_payload)
+        
+        # Update public stats counter
+        try:
+            db.collection("system").document("stats").update({
+                "meta_tags_generated": gcfirestore.Increment(1)
+            })
+        except Exception:
+            pass  # Non-critical
     
     # Update user metrics
     _update_user_metrics(user_id, token_usage, cost, model)
-    
-    # Update public stats counter
-    try:
-        db.collection("system").document("stats").update({
-            "meta_tags_generated": gcfirestore.Increment(1)
-        })
-    except Exception:
-        pass  # Non-critical
     
     # Return payload without SERVER_TIMESTAMP sentinel
     return {
@@ -285,19 +327,39 @@ def generate_meta_tags(
 
 def generate_page_content(
     *,
-    intake: Dict[str, Any],
-    keywords: Dict[str, List[Dict[str, Any]]],
-    user_id: str,
-    research_id: str,
+    intake: Dict[str, Any] = None,
+    keywords: Dict[str, List[Dict[str, Any]]] = None,
+    user_id: str = None,
+    research_id: str = None,
+    primary_keywords: List[str] = None,
+    secondary_keywords: List[str] = None,
+    long_tail_keywords: List[str] = None,
+    user_intake_form: Dict[str, Any] = None,
+    research_data: Dict[str, Any] = None,
 ) -> Dict[str, Any]:
-    """Generate full page content draft based on intake form and final keywords."""
+    """Generate full page content draft based on intake form and final keywords.
+    
+    Can be called in two ways:
+    1. Old: intake, keywords, user_id, research_id (from GET endpoint)
+    2. New: primary_keywords, secondary_keywords, long_tail_keywords, user_intake_form, user_id (from POST endpoint)
+    """
+    
+    # Handle new POST endpoint calling style
+    if primary_keywords is not None or user_intake_form is not None:
+        intake = user_intake_form or {}
+        keywords = {
+            "primary_keywords": primary_keywords or [],
+            "secondary_keywords": secondary_keywords or [],
+            "long_tail_keywords": long_tail_keywords or [],
+            "deleted_keywords": [],
+        }
     
     # Format keywords for the prompt
     final_keywords = {
-        "primary_keywords": keywords.get("primary_keywords", []),
-        "secondary_keywords": keywords.get("secondary_keywords", []),
-        "long_tail_keywords": keywords.get("long_tail_keywords", []),
-        "deleted_keywords": keywords.get("deleted_keywords", []),
+        "primary_keywords": keywords.get("primary_keywords", []) if keywords else [],
+        "secondary_keywords": keywords.get("secondary_keywords", []) if keywords else [],
+        "long_tail_keywords": keywords.get("long_tail_keywords", []) if keywords else [],
+        "deleted_keywords": keywords.get("deleted_keywords", []) if keywords else [],
     }
     
     prompt = CONTENT_PROMPT.replace(
@@ -353,32 +415,33 @@ def generate_page_content(
         snippet = content[:300]
         raise ValueError(f"Invalid JSON from model: {e}: {snippet}")
     
-    # Save to Firestore
-    doc_ref = (
-        db.collection("intakes")
-        .document(user_id)
-        .collection(research_id)
-        .document("page_content")
-    )
-    
-    # Payload for Firestore (includes SERVER_TIMESTAMP)
-    firestore_payload = {
-        "h1": result_json.get("h1", ""),
-        "intro": result_json.get("intro", ""),
-        "sections": result_json.get("sections", []),
-        "faq": result_json.get("faq", []),
-        "cta": result_json.get("cta", ""),
-        "token_usage": token_usage,
-        "status": "completed",
-        "createdAt": gcfirestore.SERVER_TIMESTAMP,
-    }
-    
-    doc_ref.set(firestore_payload)
+    # Save to Firestore if research_id is provided
+    if research_id:
+        doc_ref = (
+            db.collection("intakes")
+            .document(user_id)
+            .collection(research_id)
+            .document("page_content")
+        )
+        
+        # Payload for Firestore (includes SERVER_TIMESTAMP)
+        firestore_payload = {
+            "h1": result_json.get("h1", ""),
+            "intro": result_json.get("intro", ""),
+            "sections": result_json.get("sections", []),
+            "faq": result_json.get("faq", []),
+            "cta": result_json.get("cta", ""),
+            "token_usage": token_usage,
+            "status": "completed",
+            "createdAt": gcfirestore.SERVER_TIMESTAMP,
+        }
+        
+        doc_ref.set(firestore_payload)
     
     # Update user metrics
     _update_user_metrics(user_id, token_usage, cost)
     
-    # Return payload without SERVER_TIMESTAMP sentinel    # Return payload without SERVER_TIMESTAMP sentinel
+    # Return payload without SERVER_TIMESTAMP sentinel
     return {
         "h1": result_json.get("h1", ""),
         "intro": result_json.get("intro", ""),
