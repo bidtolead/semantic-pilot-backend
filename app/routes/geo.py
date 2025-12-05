@@ -50,6 +50,7 @@ def get_location_by_id(location_id: str):
     
     Returns location information for a specific location code.
     """
+    print(f"[GEO] Fetching location: {location_id}")
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
     
@@ -67,8 +68,10 @@ def get_location_by_id(location_id: str):
     conn.close()
     
     if not row:
+        print(f"[GEO] Location not found: {location_id}")
         raise HTTPException(status_code=404, detail="Location not found")
     
+    print(f"[GEO] Found location: {row}")
     return {
         "id": str(row[0]),
         "name": row[1],
