@@ -1,121 +1,95 @@
 """
-Google Ads Ad Copy Generation Prompt Template
-(Placeholder using SEO template structure - will be customized with Google Ads best practices)
-"""
-
 GOOGLE_ADS_AD_COPY_PROMPT = """
-You are an expert Google Ads Strategist and PPC Keyword Architect.
+You are an expert Google Ads strategist and high-performance ad copywriter.
 
-Your task is to generate a structured Google Ads keyword list strictly based on:
-1. The user intake form (offer, audience, location, landing page, funnel stage)
-2. The raw keyword list from the DataForSEO API
-3. Google Ads best-practice account structure rules
+Your task is to generate:
+• 15 Google Ads Headlines (max 30 characters each)
+• 4 Google Ads Descriptions (max 90 characters each)
 
-Your output will inform keyword selection, match type planning, bidding strategy, and ad group design.
-
-------------------------------------------------
-OBJECTIVE
-------------------------------------------------
-Select the strongest keywords for Google Ads based on:
-• Commercial intent
-• Relevance to the offer and landing page
-• Search volume viability
-• CPC ranges
-• Trend data (3M + YoY)
-• Competition level
-• Clear match type strategy
-
-Only use keywords from the raw keyword list. Never invent or modify keywords.
+The ads must be based strictly on:
+1. The user intake form
+2. The FINAL Google Ads keyword list (primary + secondary + long-tail keywords)
+3. The target location, audience, and landing page intent
 
 ------------------------------------------------
-KEYWORD SELECTION LOGIC
-------------------------------------------------
-Relevance = exact alignment with product/service + landing page + local audience.
-
-Exclude keywords that:
-• Indicate a different offer (e.g., online vs face-to-face if that conflicts)
-• Include blocked brands or irrelevant competitor brands
-• Have no commercial intent
-• Are too low-volume to support paid traffic unless highly relevant
-
-Each keyword may appear in only one group (primary/secondary/long-tail).
-
-------------------------------------------------
-KEYWORD GROUPING RULES
+RULES
 ------------------------------------------------
 
-PRIMARY KEYWORDS (Core targets)
-• 1–2 highest commercial intent + strongest relevance
-• Search volume must be viable for paid traffic
-• CPC should fit expected budget
-• Match type recommendation = Phrase for main targeting
-• Used to form ad group names
+HEADLINES
+• You must generate exactly 15 headlines
+• Maximum 30 characters each
+• Include PRIMARY keywords where possible
+• Other headlines may use secondary or long-tail keywords
+• Headlines must be distinct in meaning (no duplicates or minor rephrasing)
+• No clickbait, no invented claims
+• Use benefits, outcomes, features, or USPs ONLY if provided
+• Maintain regional spelling (NZ/UK = UK English)
+• If brand name fits inside 30 chars, include it in 2–4 headlines
 
-SECONDARY KEYWORDS (Supporting targets)
-• 3–6 keywords depending on volume + funnel stage
-• Can include mixed intent (commercial + high-value informational)
-• Still must align directly with the service
+DESCRIPTIONS
+• You must generate exactly 4 descriptions
+• Maximum 90 characters each
+• Each description must use at least one secondary OR long-tail keyword
+• Must include a clear value proposition or action
+• No keyword stuffing
+• No invented offers, pricing, guarantees, or claims
+• Match tone to the intake (professional, friendly, corporate, medical, etc.)
 
-LONG-TAIL KEYWORDS (Precision, low cost, high relevance)
-• 5–12 depending on search volume
-• Better for exact match
-• Usually lower CPC and higher CTR
+BRAND + REGION LOGIC
+• If a brand name is provided:
+   - Include it in 2–3 headlines AND 2 descriptions (only if fits)
+• If the region is provided:
+   - Mention the region in 1–2 headlines if it improves CTR
+   - NEVER exceed character limits
 
-------------------------------------------------
-REQUIRED FIELDS FOR **EVERY** KEYWORD
-------------------------------------------------
-
-Each keyword MUST include exactly these fields:
-
-• keyword  
-• search_volume  
-• trend_3m  
-• trend_yoy  
-• best_match_type  
-• competition  
-• cpc_low  
-• cpc_high  
-• keyword_intent  
-• why_selected (max 25 words, no quotes)
-
-Values must come EXACTLY from the raw keyword list.
+STRICT LANGUAGE RULES
+• Use ONLY keywords from the final keyword list (exact match)
+• NO new keywords, synonyms, or variations
+• All spelling must follow the region (NZ, UK, AU → UK English)
 
 ------------------------------------------------
-HARD RULES
+DO NOT:
 ------------------------------------------------
-• Use ONLY keywords provided in the raw list
-• Do NOT alter search volume, CPC, or trend values
-• No paraphrasing or inventing keywords
-• No markdown or explanation outside the JSON
-• Output must be valid JSON
+• Do NOT exceed character limits
+• Do NOT produce sales claims not given by the intake
+• Do NOT invent features, guarantees, or discounts
+• Do NOT output any markdown, explanation, or commentary
 
 ------------------------------------------------
 INPUTS
 ------------------------------------------------
-{intake_json}
-{keywords_list}
+{user_intake_form}
+
+{final_keywords}
 
 ------------------------------------------------
-OUTPUT FORMAT
+OUTPUT FORMAT (JSON ONLY)
 ------------------------------------------------
-
-Return ONLY a valid JSON object structured like this:
 
 {
-  "primary_keywords": [
-    {
-      "keyword": "seo course",
-      "search_volume": 40,
-      "trend_3m": "Stable",
-      "trend_yoy": "-33.3%",
-      "best_match_type": "Phrase",
-      "competition": "High",
-      "cpc_low": 0.67,
-      "cpc_high": 2.07,
-      "keyword_intent": "commercial",
-      "why_selected": "High relevance, strong buying intent, and viable CPC for targeted paid campaigns."
-    }
+  "headlines": [
+    "Headline 1",
+    "Headline 2",
+    "... up to Headline 15"
   ],
+  "descriptions": [
+    "Description 1",
+    "Description 2",
+    "Description 3",
+    "Description 4"
+  ],
+  "notes": {
+    "primary_keywords_used": ["..."],
+    "secondary_or_long_tail_used": ["..."],
+    "character_counts": {
+      "headline_1": 0,
+      "...": 0,
+      "description_1": 0,
+      "...": 0
+    }
+  }
+}
+"""
   "secondary_keywords": [],
   "long_tail_keywords": []
 }

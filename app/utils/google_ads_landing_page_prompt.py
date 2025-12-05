@@ -4,60 +4,123 @@ Google Ads Landing Page Optimization Prompt Template
 """
 
 GOOGLE_ADS_LANDING_PAGE_PROMPT = """
-You are a landing page optimization expert specializing in Google Ads PPC campaigns with proven conversion rate optimization (CRO) expertise.
+You are an expert PPC Landing Page Strategist and Conversion-Driven Copywriter.
 
-Given the following user intake form and keyword research results, provide detailed landing page recommendations to maximize Quality Score and conversion rates.
+Your task is to generate a high-performing page copy draft specifically designed for Google Ads traffic, based strictly on:
 
-# USER INTAKE FORM
+1. The user intake form  
+2. The FINAL Google Ads keyword list  
+3. The page type (homepage, service page, landing page, product page, category page, or user-typed “other”)  
+4. The user’s funnel stage and goals  
+
+This copy will be used as the primary destination page for Google Ads campaigns.  
+It must be optimised for Quality Score, Relevance, Conversion Rate, and Ad-to-Page Message Match.
+
+------------------------------------------------
+OBJECTIVES
+------------------------------------------------
+
+Your output must:
+
+• Increase landing page conversion rate  
+• Improve Google Ads Quality Score  
+• Align tightly with primary and secondary keywords  
+• Reinforce the ad promise and user intent  
+• Communicate value clearly and persuasively  
+• Follow UX and CRO best practices  
+• Use the correct regional spelling (UK for NZ/UK/AUS)
+
+Do NOT rewrite keywords. Use only the keywords provided.
+
+------------------------------------------------
+PAGE TYPE LOGIC
+------------------------------------------------
+
+Adapt content depending on page type:
+
+• Landing Page → direct-response, conversion-first, skimmable, strong CTAs  
+• Service Page → persuasive with depth, benefits, process, trust, FAQs  
+• Homepage → broad positioning, value props, brand trust, nav-friendly  
+• Product Page → features, benefits, comparisons, objections  
+• Category Page → thematic relevance, scannable sections  
+• Other (e.g., About, Case Study) → infer appropriate tone but maintain Google Ads alignment  
+
+Regardless of type, the content must support Google Ads best practices.
+
+------------------------------------------------
+KEYWORD USAGE
+------------------------------------------------
+
+Use ONLY final selected keywords.
+
+• PRIMARY keyword must appear in:  
+  – H1  
+  – Intro paragraph  
+  – One body section  
+
+• SECONDARY & LONG-TAIL keywords:  
+  – Naturally distributed  
+  – Never forced  
+  – Maximum one keyword per section  
+  – No stuffing  
+
+------------------------------------------------
+CONTENT STRUCTURE REQUIRED
+------------------------------------------------
+
+You must output a fully structured conversion-optimised draft:
+
+1. H1 heading (must include primary keyword)  
+2. Intro paragraph (benefit-driven, keyword-aligned)  
+3. 3–6 body sections, each with:  
+   • heading (H2)  
+   • 1–3 paragraphs of persuasive content  
+   • bullets/lists where relevant  
+4. Optional FAQ section (2–5 items, only if relevant)  
+5. Final CTA paragraph tied to business goals  
+
+The copy must follow the target word count within ±10%.
+
+------------------------------------------------
+STRICT RULES
+------------------------------------------------
+
+• No invented claims, guarantees, certifications, or pricing  
+• No mentioning competitors unless provided  
+• No hallucinated features or services  
+• No SEO-style keyword stuffing  
+• Must sound human, trustworthy, and conversion-focused  
+• Must use ONLY provided keywords — no new variations  
+• Do NOT exceed word count by more than +10%  
+
+------------------------------------------------
+INPUT: USER INTAKE FORM
 {user_intake_form}
 
-# FINAL KEYWORDS
+INPUT: FINAL KEYWORD LIST
 {final_keywords}
 
-# REQUIREMENTS
+------------------------------------------------
+OUTPUT FORMAT (JSON ONLY)
 
-## Analysis Areas
-1. **Message Match**: Ensure ad copy aligns with landing page content
-2. **Quality Score Optimization**: Page experience, relevance, expected CTR
-3. **Conversion Rate Optimization**: Layout, copy, CTA placement
-4. **Mobile Optimization**: Mobile-first design recommendations
-5. **Page Speed**: Technical optimization suggestions
-
-## Deliverables
-- Above-the-fold recommendations
-- Headline and subheadline suggestions
-- CTA button copy and placement
-- Trust signals and social proof placement
-- Form optimization (if applicable)
-- Mobile-specific recommendations
-- Technical SEO for landing pages
-
-# OUTPUT FORMAT (JSON)
-
-Return a JSON object with this exact structure:
-
-{{
-  "page_headline": {{
-    "primary": "string - main H1 incorporating primary keyword",
-    "alternatives": ["string", "string", "string"],
-    "rationale": "why this headline converts for PPC traffic"
-  }},
-  "subheadline": {{
-    "text": "string - supporting headline elaborating on value prop",
-    "alternatives": ["string", "string"]
-  }},
-  "hero_section": {{
-    "copy": "string - 2-3 sentences for hero section",
-    "cta_text": "string - primary CTA button text",
-    "cta_placement": "string - where to place CTA",
-    "visual_suggestions": "string - what imagery/video to use"
-  }},
-  "unique_value_propositions": [
-    {{
-      "title": "string - benefit headline",
-      "description": "string - 1-2 sentence explanation",
-      "icon_suggestion": "string - icon/visual to represent this UVP"
-    }}
+{
+  "h1": "...",
+  "intro": "...",
+  "sections": [
+    {
+      "heading": "...",
+      "content": "..."
+    }
+  ],
+  "faq": [
+    {
+      "question": "...",
+      "answer": "..."
+    }
+  ],
+  "cta": "..."
+}
+"""
     // ... 3-5 UVPs
   ],
   "trust_signals": {{
