@@ -263,7 +263,7 @@ def generate_meta_tags(
     doc_ref.set(firestore_payload)
     
     # Update user metrics
-    _update_user_metrics(user_id, token_usage, cost)
+    _update_user_metrics(user_id, token_usage, cost, model)
     
     # Update public stats counter
     try:
