@@ -54,7 +54,7 @@ EACH KEYWORD MUST INCLUDE:
    - Secondary → "H2 Subheading", "Blog Content", "Service Page", "Informational Page", etc.
    - Long-tail → "FAQ Section", "How-To Guide", "Local SEO", "Comparison Page", etc.
 • keyword_intent: informational or commercial  
-• selection_rationale: max 30 words (optional)
+• selection_rationale: max 30 words explaining why this keyword was selected
 • recommended_density (optional)  
 • synonym_overlap (optional)
 
