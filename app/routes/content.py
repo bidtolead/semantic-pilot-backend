@@ -359,8 +359,8 @@ async def generate_page_content_post(request: Request):
         user_firestore_data = user_doc.to_dict() or {}
         user_role = user_firestore_data.get("role", "user")
         
-        # Check if user is admin
-        if user_role != "admin":
+        # Skip credit check for admin and tester users
+        if user_role not in ["admin", "tester"]:
             # For regular users, check credits
             credits = user_firestore_data.get("credits") or 0
             if credits < 1:
@@ -423,8 +423,8 @@ async def generate_blog_ideas_post(request: Request):
         user_firestore_data = user_doc.to_dict() or {}
         user_role = user_firestore_data.get("role", "user")
         
-        # Check if user is admin
-        if user_role != "admin":
+        # Skip credit check for admin and tester users
+        if user_role not in ["admin", "tester"]:
             # For regular users, check credits
             credits = user_firestore_data.get("credits") or 0
             if credits < 1:
@@ -487,8 +487,8 @@ async def generate_meta_tags_post(request: Request):
         user_firestore_data = user_doc.to_dict() or {}
         user_role = user_firestore_data.get("role", "user")
         
-        # Check if user is admin
-        if user_role != "admin":
+        # Skip credit check for admin and tester users
+        if user_role not in ["admin", "tester"]:
             # For regular users, check credits
             credits = user_firestore_data.get("credits") or 0
             if credits < 1:
