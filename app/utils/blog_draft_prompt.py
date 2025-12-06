@@ -71,11 +71,27 @@ ARTICLE STRUCTURE REQUIREMENTS
    
    IMPORTANT - EXTERNAL LINK REQUIREMENT:
    • You MUST naturally embed ONE external link within the content of one section
-   • Link to a trusted authority source (Wikipedia, Forbes, BBC, Harvard Business Review, etc.)
+   • Link ONLY to trusted, non-commercial, educational/informational sources such as:
+     - Wikipedia (highly preferred for definitions and general information)
+     - Government websites (.gov domains)
+     - Educational institutions (.edu domains)
+     - Major news organizations (BBC, Reuters, The Guardian, New York Times)
+     - Academic journals and research institutions
+     - Established business publications (Harvard Business Review, MIT Sloan, Forbes for data/research)
+     - Health authorities (Mayo Clinic, NHS, CDC for health topics)
+   
+   • DO NOT link to:
+     - Commercial service providers or competitors
+     - Course platforms or training providers
+     - Marketing/advertising websites
+     - Review sites or comparison sites
+     - Any site that sells products/services related to the topic
+   
    • Use proper markdown link syntax: [anchor text](url)
-   • The link should add value and context to the section
-   • Choose a section where an external reference makes sense naturally
-   • Example: "According to [Harvard Business Review](https://hbr.org/...), effective SEO strategies..."
+   • The link should add educational value and context to the section
+   • Choose a section where citing an authoritative source makes sense naturally
+   • Example: "According to [Wikipedia](https://en.wikipedia.org/wiki/...), search engine optimization involves..."
+   • Example: "Research from [Harvard Business Review](https://hbr.org/...) shows that..."
 
 --------------------------------------------------------------------
 TABLE FORMATTING REQUIREMENTS
