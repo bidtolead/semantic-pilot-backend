@@ -328,7 +328,19 @@ async def handle_page_content(
 @router.post("/page-content/")
 async def generate_page_content_post(request: Request):
     """Generate page content directly from frontend request"""
-    user_data = await verify_token(request)
+    # Extract and verify token from Authorization header
+    auth_header = request.headers.get("Authorization")
+    if not auth_header or not auth_header.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Missing or invalid Authorization header")
+    
+    try:
+        from firebase_admin import auth as firebase_auth
+        token = auth_header.replace("Bearer ", "")
+        user_data = firebase_auth.verify_id_token(token)
+    except Exception as e:
+        print(f"[Token Verify] Error: {e}")
+        raise HTTPException(status_code=401, detail="Invalid or expired token")
+    
     user_id = user_data.get("uid")
     
     try:
@@ -379,7 +391,19 @@ async def generate_page_content_post(request: Request):
 @router.post("/blog-ideas/")
 async def generate_blog_ideas_post(request: Request):
     """Generate blog ideas directly from frontend request"""
-    user_data = await verify_token(request)
+    # Extract and verify token from Authorization header
+    auth_header = request.headers.get("Authorization")
+    if not auth_header or not auth_header.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Missing or invalid Authorization header")
+    
+    try:
+        from firebase_admin import auth as firebase_auth
+        token = auth_header.replace("Bearer ", "")
+        user_data = firebase_auth.verify_id_token(token)
+    except Exception as e:
+        print(f"[Token Verify] Error: {e}")
+        raise HTTPException(status_code=401, detail="Invalid or expired token")
+    
     user_id = user_data.get("uid")
     
     try:
@@ -426,7 +450,19 @@ async def generate_blog_ideas_post(request: Request):
 @router.post("/meta-tags/")
 async def generate_meta_tags_post(request: Request):
     """Generate meta tags directly from frontend request"""
-    user_data = await verify_token(request)
+    # Extract and verify token from Authorization header
+    auth_header = request.headers.get("Authorization")
+    if not auth_header or not auth_header.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Missing or invalid Authorization header")
+    
+    try:
+        from firebase_admin import auth as firebase_auth
+        token = auth_header.replace("Bearer ", "")
+        user_data = firebase_auth.verify_id_token(token)
+    except Exception as e:
+        print(f"[Token Verify] Error: {e}")
+        raise HTTPException(status_code=401, detail="Invalid or expired token")
+    
     user_id = user_data.get("uid")
     
     try:
