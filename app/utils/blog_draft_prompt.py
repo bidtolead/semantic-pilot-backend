@@ -28,6 +28,14 @@ KEYWORD USAGE
 ------------------------------------------------------------
 STRUCTURE
 ------------------------------------------------------------
+**CRITICAL: This article MUST be approximately 1000 words total.**
+
+Length targets:
+• Introduction: 100-150 words
+• Each section: 150-200 words (with 6-8 sections = 900-1600 words of body content)
+• FAQ: 3-5 questions with 50-80 word answers (150-400 words)
+• Total: Aim for 1000-1200 words
+
 1. **H1** - Engaging blog post title with primary keyword
    Example: "What to Expect from an SEO Training Course in Auckland"
    (NOT: "Our SEO Training Course in Auckland")
@@ -37,10 +45,10 @@ STRUCTURE
    - Explain what they'll learn from this article
    - Include primary keyword naturally
 
-3. **Sections** (4-6 educational sections)
+3. **Sections** (6-8 educational sections for 1000-word target)
    Each section should:
    - Have an informative H2 heading
-   - Provide detailed explanations
+   - Provide detailed explanations (150-200 words per section)
    - Include examples, tips, or how-to steps
    - Use lists or bullet points where helpful
    
@@ -51,6 +59,8 @@ STRUCTURE
    - Best practices
    - Real-world examples
    - Expert tips
+   - Advanced insights
+   - Action steps for readers
 
 4. **FAQ** (3-5 questions)
    - Answer common reader questions
@@ -103,6 +113,21 @@ OUTPUT FORMAT (JSON ONLY)
   ],
   "cta": "Encouraging message to continue learning..."
 }
+
+------------------------------------------------------------
+CRITICAL WORD COUNT REQUIREMENT
+------------------------------------------------------------
+**MINIMUM 1000 WORDS TOTAL FOR THIS ARTICLE**
+
+This is non-negotiable. The article must be comprehensive and detailed:
+• Write longer, more detailed sections (150-200 words each)
+• Include more examples, stories, and practical insights
+• Add more subsections under main headings if needed
+• Expand on each point with specific details and context
+• Include more transitions and explanatory content
+
+Do NOT write short, brief content. This must be a deep-dive educational article.
+Count your words as you write and ensure at least 1000 total words.
 
 Return ONLY valid JSON. No markdown, no commentary.
 """
