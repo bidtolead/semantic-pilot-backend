@@ -438,10 +438,46 @@ def generate_page_content(
                     break
         
         if not has_external_link:
-            print(f"[WARNING] Blog post missing external link - AI did not follow instructions")
-            # Add a Wikipedia link to intro as fallback
-            if "intro" in result_json:
-                result_json["intro"] += " For more information, see [Wikipedia](https://en.wikipedia.org)."
+            print(f"[WARNING] Blog post missing external link - attempting to add one intelligently")
+            # Find appropriate anchor text in the intro and convert it to a link
+            import re
+            
+            if "intro" in result_json and result_json["intro"]:
+                intro = result_json["intro"]
+                
+                # Try to find the first occurrence of the primary keyword or a related term
+                # and make that a Wikipedia link
+                primary_kw = primary_keywords[0] if primary_keywords else ""
+                
+                # Look for the keyword (case-insensitive)
+                if primary_kw:
+                    # Try exact match first
+                    pattern = re.compile(r'\b(' + re.escape(primary_kw) + r')\b', re.IGNORECASE)
+                    match = pattern.search(intro)
+                    
+                    if match:
+                        # Found the keyword - replace first occurrence with link
+                        matched_text = match.group(1)
+                        wikipedia_url = f"https://en.wikipedia.org/wiki/{primary_kw.replace(' ', '_')}"
+                        intro_with_link = pattern.sub(f"[{matched_text}]({wikipedia_url})", intro, count=1)
+                        result_json["intro"] = intro_with_link
+                        print(f"[INFO] Added Wikipedia link to '{matched_text}' in intro")
+                    else:
+                        # Fallback: find first noun phrase or capitalize words (likely topic)
+                        # Look for sequences of 1-4 capitalized words
+                        cap_pattern = re.compile(r'\b([A-Z][a-z]+(?:\s+[A-Z][a-z]+){0,3})\b')
+                        cap_match = cap_pattern.search(intro)
+                        
+                        if cap_match:
+                            anchor_text = cap_match.group(1)
+                            wikipedia_url = f"https://en.wikipedia.org/wiki/{anchor_text.replace(' ', '_')}"
+                            intro_with_link = intro.replace(anchor_text, f"[{anchor_text}]({wikipedia_url})", 1)
+                            result_json["intro"] = intro_with_link
+                            print(f"[INFO] Added Wikipedia link to '{anchor_text}' in intro")
+                        else:
+                            # Last resort: just add a contextual link at the end
+                            result_json["intro"] += " [Learn more](https://en.wikipedia.org)."
+                            print(f"[INFO] Added generic link as last resort")
     
     # Save to Firestore if research_id is provided
     if research_id:
