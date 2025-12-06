@@ -16,6 +16,8 @@ from slowapi.util import get_remote_address
 import asyncio
 import uuid
 from datetime import datetime
+import threading
+import traceback
 
 router = APIRouter(prefix="/content", tags=["content"])
 limiter = Limiter(key_func=get_remote_address)
@@ -45,9 +47,14 @@ def generate_blog_draft_background(
 ):
     """Background task to generate blog draft and save to Firestore"""
     try:
-        print(f"[BackgroundBlog] Starting generation for user {user_id}, research {research_id}, index {blog_index}")
+        print(f"\n[BackgroundBlog] 🚀 Starting generation")
+        print(f"  User: {user_id}")
+        print(f"  Research: {research_id}")
+        print(f"  Index: {blog_index}")
+        print(f"  Keyword: {target_keyword}")
         
         # Generate content
+        print(f"[BackgroundBlog] Calling generate_page_content...")
         result = generate_page_content(
             primary_keywords=primary_keywords,
             secondary_keywords=secondary_keywords,
@@ -57,7 +64,9 @@ def generate_blog_draft_background(
             user_id=user_id,
         )
         
-        print(f"[BackgroundBlog] Content generated successfully")
+        print(f"[BackgroundBlog] ✅ Content generated successfully")
+        print(f"  Result type: {type(result)}")
+        print(f"  Result keys: {result.keys() if isinstance(result, dict) else 'N/A'}")
         
         # Save to Firestore
         draft_data = {
@@ -77,7 +86,7 @@ def generate_blog_draft_background(
         )
         blog_draft_ref.set(draft_data)
         
-        print(f"[BackgroundBlog] Saved to Firestore")
+        print(f"[BackgroundBlog] ✅ Saved to Firestore at intakes/{user_id}/{research_id}/blog_draft_{blog_index}")
         
         # Create notification
         notification_data = {
@@ -89,22 +98,28 @@ def generate_blog_draft_background(
         }
         
         db.collection("users").document(user_id).collection("notifications").add(notification_data)
-        print(f"[BackgroundBlog] Notification created")
+        print(f"[BackgroundBlog] ✅ Notification created")
+        print(f"[BackgroundBlog] 🎉 Blog generation complete!\n")
         
     except Exception as e:
-        print(f"[BackgroundBlog] Error: {e}")
+        print(f"\n[BackgroundBlog] ❌ ERROR during generation:")
+        print(f"  Error: {str(e)}")
+        print(f"  Type: {type(e).__name__}")
+        print(f"  Traceback:\n{traceback.format_exc()}\n")
+        
         # Save error notification
         try:
             error_notification = {
                 "title": "Blog Draft Failed",
-                "message": f"Failed to generate blog: {str(e)}",
+                "message": f"Failed to generate blog: {str(e)[:200]}",
                 "link": f"/research/results?researchId={research_id}",
                 "timestamp": gcfirestore.SERVER_TIMESTAMP,
                 "read": False,
             }
             db.collection("users").document(user_id).collection("notifications").add(error_notification)
-        except:
-            pass
+            print(f"[BackgroundBlog] Error notification created")
+        except Exception as notify_err:
+            print(f"[BackgroundBlog] Failed to create error notification: {notify_err}")
 
 
 
@@ -530,21 +545,27 @@ async def generate_page_content_async(request: Request, background_tasks: Backgr
                 "credits": gcfirestore.Increment(-1)
             })
         
-        # Start background task
-        background_tasks.add_task(
-            generate_blog_draft_background,
-            user_id=user_id,
-            research_id=research_id,
-            blog_index=blog_index,
-            primary_keywords=primary_keywords,
-            secondary_keywords=secondary_keywords,
-            long_tail_keywords=long_tail_keywords,
-            user_intake_form=user_intake_form,
-            research_data=research_data,
-            blog_idea_title=blog_idea_title,
-            target_keyword=target_keyword,
-            search_intent=search_intent,
+        # Start background task using threading (more reliable than FastAPI BackgroundTasks)
+        print(f"[AsyncEndpoint] Starting background thread for user {user_id}")
+        thread = threading.Thread(
+            target=generate_blog_draft_background,
+            args=(
+                user_id,
+                research_id,
+                blog_index,
+                primary_keywords,
+                secondary_keywords,
+                long_tail_keywords,
+                user_intake_form,
+                research_data,
+                blog_idea_title,
+                target_keyword,
+                search_intent,
+            ),
+            daemon=False,  # Keep thread alive even if main process ends
         )
+        thread.start()
+        print(f"[AsyncEndpoint] Background thread started successfully")
         
         # Return immediately
         return {
@@ -555,6 +576,8 @@ async def generate_page_content_async(request: Request, background_tasks: Backgr
     except HTTPException:
         raise
     except Exception as e:
+        print(f"[AsyncEndpoint] Error: {e}")
+        print(traceback.format_exc())
         raise HTTPException(status_code=500, detail=str(e))
 
 
