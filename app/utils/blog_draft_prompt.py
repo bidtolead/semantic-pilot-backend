@@ -91,14 +91,18 @@ STRUCTURE (MUST BE DETAILED & LONG)
    - Focus on providing helpful, comprehensive information
    - Use examples in FAQ answers
 
-5. **External Link** (ONE link to a trusted source)
-   - Include exactly ONE link to a reputable, authoritative source
-   - Choose from: Wikipedia, Forbes, CNN, Harvard Business Review, TechCrunch, or similar trusted publications
-   - Link should be relevant to the article topic and add credibility
-   - Place it naturally within the relevant section
-   - Format: Include the URL and brief context about why you're linking to it
-   - Example: "According to [Source Name], [relevant fact]... Learn more: [URL]"
-   - This improves SEO through quality external citations and demonstrates authority
+5. **External Link** (REQUIRED - ONE link to a trusted source)
+   - YOU MUST include exactly ONE link to a reputable, authoritative source
+   - This is MANDATORY and cannot be skipped
+   - Choose from: Wikipedia, Forbes, CNN, Harvard Business Review, TechCrunch, Mayo Clinic, NIH, BBC, Reuters, or similar trusted publications
+   - Link must be relevant to the article topic and add credibility
+   - Provides SEO value through quality external citations
+   - Example sources:
+     * Wikipedia for definitions and background
+     * Forbes/Harvard Business Review for business topics
+     * Mayo Clinic/NIH for health topics
+     * TechCrunch for technology topics
+   - Format as JSON object with url, source_name, and context fields
 
 6. **CTA** - Encouraging message to continue learning
    - "Want to learn more about [topic]? Explore our other articles on [related topics]."
