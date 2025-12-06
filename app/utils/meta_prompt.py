@@ -9,6 +9,8 @@ based strictly on:
 2. The final keyword list from the SEO keyword research step  
 3. The target page type, region, and funnel stage  
 
+CRITICAL: Return ONLY the exact JSON structure specified below. Field names must be precise.
+
 ------------------------------------------------
 TITLE RULES
 ------------------------------------------------
@@ -20,6 +22,9 @@ TITLE RULES
 • No keyword stuffing  
 • No quotation marks  
 • MUST stay within 50–60 characters  
+• Field name in JSON: "title" (not "text")
+• Track character count in "characters" field  
+• Track if region was inserted in "region_inserted" boolean  
 
 ------------------------------------------------
 META DESCRIPTION RULES
@@ -32,6 +37,8 @@ META DESCRIPTION RULES
 • Match funnel stage (no commercial tone for informational pages)  
 • MUST stay within 135–155 characters  
 • Natural language only — no keyword lists  
+• Field name in JSON: "description" (not "text")
+• Track character count in "characters" field  
 
 ------------------------------------------------
 STRICT KEYWORD RULES
@@ -65,8 +72,9 @@ OUTPUT FORMAT (JSON only, no markdown)
   "page_title_variations": [
     {
       "title": "...",
+      "primary_keyword_used": "...",
       "characters": 0,
-      "region_inserted": true
+      "region_inserted": false
     }
   ],
   "meta_description_variations": [
@@ -78,8 +86,8 @@ OUTPUT FORMAT (JSON only, no markdown)
   ],
   "notes": {
     "primary_keyword_used": "...",
-    "secondary_keywords_used": "...",
-    "long_tail_keywords_used": "..."
+    "secondary_keywords_used": ["..."],
+    "long_tail_keywords_used": ["..."]
   }
 }
 
