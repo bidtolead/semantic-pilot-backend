@@ -177,15 +177,25 @@ CRITICAL ENFORCEMENT
 If the total draft is under 900 words, you MUST expand content.
 If it exceeds 1200 words, shorten lightly but keep depth.
 
+⚠️ EXTERNAL LINK IS MANDATORY - DO NOT SKIP THIS ⚠️
+You MUST include exactly ONE external link embedded in one section's content.
+Use markdown format: [anchor text](https://example.com)
+Acceptable sources ONLY: Wikipedia, .gov, .edu, BBC, Reuters, academic journals
+DO NOT use: commercial sites, course providers, marketing sites, competitors
+
 MANDATORY REQUIREMENTS CHECKLIST (ALL MUST BE PRESENT):
 ✓ h1 field populated
 ✓ intro field (150-200 words)
 ✓ sections array (8-10 items with heading and content)
-✓ At least ONE section must contain an embedded external link in markdown format
+✓ At least ONE section MUST contain an embedded external link in markdown format [text](url)
+✓ The external link MUST be to Wikipedia, .gov, .edu, or major news source
 ✓ faq array (3 items with question and answer)
 ✓ cta field
 
-If no external link is embedded in any section content, the output is INVALID.
+VALIDATION:
+- Search all section content for the pattern [text](http
+- If no match found, output is INVALID and will be REJECTED
+- External link is NOT optional - it is REQUIRED
 
 Return ONLY the JSON. No commentary. No markdown outside JSON.
 """

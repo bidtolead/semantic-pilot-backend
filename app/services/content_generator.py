@@ -426,6 +426,23 @@ def generate_page_content(
         snippet = content[:300]
         raise ValueError(f"Invalid JSON from model: {e}: {snippet}")
     
+    # Validate external link is present if this is a blog post
+    if is_blog_post:
+        has_external_link = False
+        if "sections" in result_json and isinstance(result_json["sections"], list):
+            for section in result_json["sections"]:
+                section_content = section.get("content", "")
+                # Check for markdown link pattern [text](url)
+                if "[" in section_content and "](" in section_content and "http" in section_content:
+                    has_external_link = True
+                    break
+        
+        if not has_external_link:
+            print(f"[WARNING] Blog post missing external link - AI did not follow instructions")
+            # Add a Wikipedia link to intro as fallback
+            if "intro" in result_json:
+                result_json["intro"] += " For more information, see [Wikipedia](https://en.wikipedia.org)."
+    
     # Save to Firestore if research_id is provided
     if research_id:
         doc_ref = (
