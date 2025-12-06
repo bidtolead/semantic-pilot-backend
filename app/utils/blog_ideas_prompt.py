@@ -20,7 +20,7 @@ STRICT KEYWORD RULES
 BLOG TOPIC REQUIREMENTS
 ------------------------------------------------------------
 Generate:
-• 8–12 SEO-focused blog ideas
+• Exactly 5 SEO-focused blog ideas
 • Ideas must cover a variety of angles:
   - How-to
   - Guides

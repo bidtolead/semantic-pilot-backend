@@ -104,6 +104,13 @@ INPUT: FINAL KEYWORD LIST
 {final_keywords}
 
 ------------------------------------------------------------
+CRITICAL: SPECIAL INSTRUCTIONS CHECK
+------------------------------------------------------------
+**BEFORE WRITING ANYTHING**, check if the user intake form contains "special_instructions".
+If present, those instructions OVERRIDE the default content structure and tone.
+Follow special_instructions EXACTLY as written.
+
+------------------------------------------------------------
 OUTPUT FORMAT (JSON ONLY)
 ------------------------------------------------------------
 

@@ -4,6 +4,7 @@ from typing import Any, Dict, List
 from app.services.firestore import db
 from google.cloud import firestore as gcfirestore
 from app.utils.blog_ideas_prompt import BLOG_IDEAS_PROMPT
+from app.utils.blog_draft_prompt import BLOG_DRAFT_PROMPT
 from app.utils.meta_prompt import META_TAGS_PROMPT
 from app.utils.content_prompt import CONTENT_PROMPT
 from app.utils.google_ads_ad_copy_prompt import GOOGLE_ADS_AD_COPY_PROMPT
@@ -363,7 +364,16 @@ def generate_page_content(
         "deleted_keywords": keywords.get("deleted_keywords", []) if keywords else [],
     }
     
-    prompt = CONTENT_PROMPT.replace(
+    # Check if this is a blog post - use dedicated blog prompt
+    is_blog_post = (
+        intake.get("page_type") == "blog_post" or 
+        intake.get("content_style") == "informational_blog" or
+        "blog" in str(intake.get("page_type", "")).lower()
+    )
+    
+    selected_prompt = BLOG_DRAFT_PROMPT if is_blog_post else CONTENT_PROMPT
+    
+    prompt = selected_prompt.replace(
         "{user_intake_form}",
         json.dumps(intake, ensure_ascii=False, indent=2, default=_json_default),
     ).replace(

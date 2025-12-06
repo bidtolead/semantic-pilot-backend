@@ -1,8 +1,8 @@
 META_TAGS_PROMPT = """You are an expert SEO metadata strategist specialising in high-CTR titles and descriptions.
 
 Your task is to generate:
-• 5–7 Page Title variations (50–60 characters)
-• 5–7 Meta Description variations (135–155 characters)
+• Exactly 5 Page Title variations (50–60 characters)
+• Exactly 5 Meta Description variations (135–155 characters)
 
 based strictly on:
 1. The user intake form  
