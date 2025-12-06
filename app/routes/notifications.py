@@ -12,6 +12,7 @@ db = firestore.client()
 class SelfNotification(BaseModel):
     title: str
     message: str
+    link: str = None
 
 @router.get("")
 async def list_notifications(user: dict = Depends(get_current_user)):
@@ -28,6 +29,7 @@ async def list_notifications(user: dict = Depends(get_current_user)):
                 "id": doc.id,
                 "title": data.get("title", ""),
                 "message": data.get("message", ""),
+                "link": data.get("link"),
                 "read": data.get("read", False),
                 "createdAt": data.get("createdAt", "")
             })
@@ -115,6 +117,7 @@ async def create_self_notification(payload: SelfNotification, user: dict = Depen
             "userId": user["uid"],
             "title": payload.title,
             "message": payload.message,
+            "link": payload.link,
             "read": False,
             "createdAt": timestamp,
         })
