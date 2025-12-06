@@ -68,6 +68,14 @@ ARTICLE STRUCTURE REQUIREMENTS
    • Include lists where relevant
    • Include a featured snippet-friendly mini-section where possible
      (definition, steps, comparison, pros/cons, etc.)
+   
+   IMPORTANT - EXTERNAL LINK REQUIREMENT:
+   • You MUST naturally embed ONE external link within the content of one section
+   • Link to a trusted authority source (Wikipedia, Forbes, BBC, Harvard Business Review, etc.)
+   • Use proper markdown link syntax: [anchor text](url)
+   • The link should add value and context to the section
+   • Choose a section where an external reference makes sense naturally
+   • Example: "According to [Harvard Business Review](https://hbr.org/...), effective SEO strategies..."
 
 --------------------------------------------------------------------
 TABLE FORMATTING REQUIREMENTS
@@ -107,27 +115,6 @@ FAQ SECTION (3 questions)
 • Do NOT include sales language
 
 --------------------------------------------------------------------
-EXTERNAL LINK REQUIREMENT (ONE ONLY)
---------------------------------------------------------------------
-You MUST include exactly ONE external link to a trusted authority source such as:
-
-• Wikipedia
-• Forbes
-• BBC
-• TechCrunch
-• Harvard Business Review
-• Mayo Clinic
-• NIH
-• Reuters
-
-Format the external link as a JSON object:
-{
-  "url": "...",
-  "source_name": "...",
-  "context": "Why this link is relevant to the article"
-}
-
---------------------------------------------------------------------
 TONE & STYLE
 --------------------------------------------------------------------
 • Conversational but professional
@@ -163,13 +150,10 @@ OUTPUT FORMAT (STRICT JSON ONLY)
   "faq": [
     { "question": "...", "answer": "..." }
   ],
-  "external_link": {
-    "url": "...",
-    "source_name": "...",
-    "context": "..."
-  },
   "cta": "..."
 }
+
+Note: One section's content MUST include an embedded markdown link [text](url) to an authority source.
 
 ====================================================================
 CRITICAL ENFORCEMENT
@@ -181,11 +165,11 @@ MANDATORY REQUIREMENTS CHECKLIST (ALL MUST BE PRESENT):
 ✓ h1 field populated
 ✓ intro field (150-200 words)
 ✓ sections array (8-10 items with heading and content)
+✓ At least ONE section must contain an embedded external link in markdown format
 ✓ faq array (3 items with question and answer)
-✓ external_link object (url, source_name, context) - REQUIRED, NOT OPTIONAL
 ✓ cta field
 
-If external_link is missing, the output is INVALID.
+If no external link is embedded in any section content, the output is INVALID.
 
 Return ONLY the JSON. No commentary. No markdown outside JSON.
 """
