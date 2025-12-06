@@ -429,7 +429,15 @@ def generate_page_content(
     # Validate external link is present if this is a blog post
     if is_blog_post:
         has_external_link = False
-        if "sections" in result_json and isinstance(result_json["sections"], list):
+        
+        # Check intro for external link
+        if "intro" in result_json and result_json["intro"]:
+            intro_content = result_json["intro"]
+            if "[" in intro_content and "](" in intro_content and "http" in intro_content:
+                has_external_link = True
+        
+        # Check sections for external link
+        if not has_external_link and "sections" in result_json and isinstance(result_json["sections"], list):
             for section in result_json["sections"]:
                 section_content = section.get("content", "")
                 # Check for markdown link pattern [text](url)
@@ -441,6 +449,7 @@ def generate_page_content(
             print(f"[WARNING] Blog post missing external link - attempting to add one intelligently")
             # Find appropriate anchor text in the intro and convert it to a link
             import re
+            link_added = False
             
             if "intro" in result_json and result_json["intro"]:
                 intro = result_json["intro"]
@@ -458,26 +467,52 @@ def generate_page_content(
                     if match:
                         # Found the keyword - replace first occurrence with link
                         matched_text = match.group(1)
-                        wikipedia_url = f"https://en.wikipedia.org/wiki/{primary_kw.replace(' ', '_')}"
+                        # Convert to title case for better Wikipedia URL
+                        wiki_term = primary_kw.title()
+                        wikipedia_url = f"https://en.wikipedia.org/wiki/{wiki_term.replace(' ', '_')}"
                         intro_with_link = pattern.sub(f"[{matched_text}]({wikipedia_url})", intro, count=1)
                         result_json["intro"] = intro_with_link
+                        link_added = True
                         print(f"[INFO] Added Wikipedia link to '{matched_text}' in intro")
-                    else:
-                        # Fallback: find first noun phrase or capitalize words (likely topic)
-                        # Look for sequences of 1-4 capitalized words
-                        cap_pattern = re.compile(r'\b([A-Z][a-z]+(?:\s+[A-Z][a-z]+){0,3})\b')
-                        cap_match = cap_pattern.search(intro)
-                        
-                        if cap_match:
-                            anchor_text = cap_match.group(1)
-                            wikipedia_url = f"https://en.wikipedia.org/wiki/{anchor_text.replace(' ', '_')}"
-                            intro_with_link = intro.replace(anchor_text, f"[{anchor_text}]({wikipedia_url})", 1)
-                            result_json["intro"] = intro_with_link
-                            print(f"[INFO] Added Wikipedia link to '{anchor_text}' in intro")
-                        else:
-                            # Last resort: just add a contextual link at the end
-                            result_json["intro"] += " [Learn more](https://en.wikipedia.org)."
-                            print(f"[INFO] Added generic link as last resort")
+                
+                if not link_added:
+                    # Fallback: find first noun phrase or capitalize words (likely topic)
+                    # Look for sequences of 1-4 capitalized words
+                    cap_pattern = re.compile(r'\b([A-Z][a-z]+(?:\s+[A-Z][a-z]+){0,3})\b')
+                    cap_match = cap_pattern.search(intro)
+                    
+                    if cap_match:
+                        anchor_text = cap_match.group(1)
+                        wikipedia_url = f"https://en.wikipedia.org/wiki/{anchor_text.replace(' ', '_')}"
+                        intro_with_link = intro.replace(anchor_text, f"[{anchor_text}]({wikipedia_url})", 1)
+                        result_json["intro"] = intro_with_link
+                        link_added = True
+                        print(f"[INFO] Added Wikipedia link to '{anchor_text}' in intro")
+            
+            # If still no link added, try to add it to the first section
+            if not link_added and "sections" in result_json and isinstance(result_json["sections"], list) and len(result_json["sections"]) > 0:
+                first_section = result_json["sections"][0]
+                section_content = first_section.get("content", "")
+                
+                primary_kw = primary_keywords[0] if primary_keywords else ""
+                if primary_kw and section_content:
+                    pattern = re.compile(r'\b(' + re.escape(primary_kw) + r')\b', re.IGNORECASE)
+                    match = pattern.search(section_content)
+                    
+                    if match:
+                        matched_text = match.group(1)
+                        wiki_term = primary_kw.title()
+                        wikipedia_url = f"https://en.wikipedia.org/wiki/{wiki_term.replace(' ', '_')}"
+                        section_with_link = pattern.sub(f"[{matched_text}]({wikipedia_url})", section_content, count=1)
+                        result_json["sections"][0]["content"] = section_with_link
+                        link_added = True
+                        print(f"[INFO] Added Wikipedia link to '{matched_text}' in first section")
+            
+            # Absolute last resort: add generic link to intro
+            if not link_added:
+                if "intro" in result_json and result_json["intro"]:
+                    result_json["intro"] += " [Learn more on Wikipedia](https://en.wikipedia.org)."
+                    print(f"[INFO] Added generic Wikipedia link as last resort")
     
     # Save to Firestore if research_id is provided
     if research_id:

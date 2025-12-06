@@ -8,6 +8,9 @@ Your task is to generate a fully optimized, deeply educational blog article of A
 
 This article MUST be long, detailed, structured, and designed for high SEO performance.
 
+⚠️ CRITICAL REQUIREMENT: You MUST include ONE external link to Wikipedia, .gov, .edu, or major news site.
+   This is NON-NEGOTIABLE. If you forget this, the article will be rejected.
+
 ====================================================================
 ABSOLUTE WORD COUNT REQUIREMENT
 ====================================================================
@@ -69,8 +72,9 @@ ARTICLE STRUCTURE REQUIREMENTS
    • Include a featured snippet-friendly mini-section where possible
      (definition, steps, comparison, pros/cons, etc.)
    
-   IMPORTANT - EXTERNAL LINK REQUIREMENT:
+   ⚠️ IMPORTANT - EXTERNAL LINK REQUIREMENT (NON-NEGOTIABLE):
    • You MUST naturally embed ONE external link within the content of one section
+   • This is a REQUIRED element - do NOT skip this
    • Link ONLY to trusted, non-commercial, educational/informational sources such as:
      - Wikipedia (highly preferred for definitions and general information)
      - Government websites (.gov domains)
