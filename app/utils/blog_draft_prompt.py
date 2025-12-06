@@ -41,7 +41,16 @@ KEYWORD USAGE
   - H1 (blog title)
   - Introduction
   - At least 2-3 section headings
-• Use secondary/long-tail keywords throughout sections
+• SECONDARY keywords should appear in:
+  - Section headings (H2s)
+  - Supporting paragraphs
+  - Throughout body content
+• LONG-TAIL keywords are CRITICAL for this blog:
+  - Use them naturally in explanations and examples
+  - Long-tail keywords answer specific questions readers ask
+  - Include 3-5 long-tail keywords minimum throughout the content
+  - They should appear in body paragraphs, lists, and FAQ answers
+  - Perfect for detailed explanations and niche topics
 
 ------------------------------------------------------------
 STRUCTURE (MUST BE DETAILED & LONG)
