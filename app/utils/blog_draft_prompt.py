@@ -177,5 +177,15 @@ CRITICAL ENFORCEMENT
 If the total draft is under 900 words, you MUST expand content.
 If it exceeds 1200 words, shorten lightly but keep depth.
 
+MANDATORY REQUIREMENTS CHECKLIST (ALL MUST BE PRESENT):
+✓ h1 field populated
+✓ intro field (150-200 words)
+✓ sections array (8-10 items with heading and content)
+✓ faq array (3 items with question and answer)
+✓ external_link object (url, source_name, context) - REQUIRED, NOT OPTIONAL
+✓ cta field
+
+If external_link is missing, the output is INVALID.
+
 Return ONLY the JSON. No commentary. No markdown outside JSON.
 """
