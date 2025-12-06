@@ -63,6 +63,8 @@ def generate_blog_draft_background(
         print(f"[BackgroundBlog] Calling generate_page_content...")
         sys.stdout.flush()
         
+        # Don't pass research_id to avoid overwriting page_content document
+        # Blog drafts save separately to blog_draft_{index}
         result = generate_page_content(
             primary_keywords=primary_keywords,
             secondary_keywords=secondary_keywords,
@@ -70,7 +72,7 @@ def generate_blog_draft_background(
             user_intake_form=user_intake_form,
             research_data=research_data,
             user_id=user_id,
-            research_id=research_id,  # Add research_id parameter
+            research_id=None,  # Prevent overwriting page_content
         )
         
         print(f"[BackgroundBlog] ✅ Content generated successfully")
