@@ -452,13 +452,26 @@ def generate_page_content(
     # Update user metrics
     _update_user_metrics(user_id, token_usage, cost, model)
     
-    # Return payload without SERVER_TIMESTAMP sentinel
+    # Generate meta tags alongside page content using the same keywords
+    meta_tags_result = generate_meta_tags(
+        primary_keywords=primary_keywords or (keywords.get("primary_keywords", []) if keywords else []),
+        secondary_keywords=secondary_keywords or (keywords.get("secondary_keywords", []) if keywords else []),
+        long_tail_keywords=long_tail_keywords or (keywords.get("long_tail_keywords", []) if keywords else []),
+        user_intake_form=intake,
+        user_id=user_id,
+        research_id=research_id,
+    )
+    
+    # Return payload without SERVER_TIMESTAMP sentinel, including generated meta tags
     return {
         "h1": result_json.get("h1", ""),
         "intro": result_json.get("intro", ""),
         "sections": result_json.get("sections", []),
         "faq": result_json.get("faq", []),
         "cta": result_json.get("cta", ""),
+        "page_title_variations": meta_tags_result.get("page_title_variations", []),
+        "meta_description_variations": meta_tags_result.get("meta_description_variations", []),
+        "meta_notes": meta_tags_result.get("notes", {}),
         "token_usage": token_usage,
         "status": "completed",
     }
