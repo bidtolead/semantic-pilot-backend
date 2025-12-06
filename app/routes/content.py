@@ -386,7 +386,6 @@ async def generate_page_content_post(request: Request):
                 })
             except Exception as e:
                 print(f"[Warning] Credit deduction failed but content was generated: {e}")
-        )
         
         return {
             "status": "success",
