@@ -6,6 +6,29 @@ Your task is to generate a complete, fully structured page draft using:
 3. Best practices for SEO, GEO, AI Overviews, featured snippets, topical authority, and conversion copywriting
 
 ------------------------------------------------------------
+CONTENT TYPE DETECTION
+------------------------------------------------------------
+**CRITICAL**: Check the user intake form for:
+• page_type: "blog_post" → Generate INFORMATIONAL BLOG CONTENT
+• content_style: "informational_blog" → Educational article style
+• special_instructions → Follow these instructions precisely
+
+**IF THIS IS A BLOG POST**:
+• Write in an educational, narrative style
+• Focus on teaching and providing value
+• Use conversational yet authoritative tone
+• NO sales language or service promotion
+• NO "contact us" or "book now" CTAs
+• CTA should encourage further learning/reading
+• Structure as: engaging intro → educational sections → actionable tips → conclusion
+• Examples, case studies, and practical tips are encouraged
+
+**IF THIS IS A SERVICE/LANDING PAGE**:
+• Focus on benefits, proof, and conversion
+• Include clear CTAs
+• Emphasize unique value propositions
+
+------------------------------------------------------------
 STRICT KEYWORD RULES
 ------------------------------------------------------------
 • Use ONLY keywords from the FINAL keyword list  
