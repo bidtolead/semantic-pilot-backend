@@ -18,6 +18,7 @@ import uuid
 from datetime import datetime
 import threading
 import traceback
+import sys
 
 router = APIRouter(prefix="/content", tags=["content"])
 limiter = Limiter(key_func=get_remote_address)
@@ -46,15 +47,22 @@ def generate_blog_draft_background(
     search_intent: str,
 ):
     """Background task to generate blog draft and save to Firestore"""
+    print(f"\n[BackgroundBlog] 🚀 THREAD STARTED (PID check)")
+    sys.stdout.flush()
+    sys.stderr.flush()
+    
     try:
-        print(f"\n[BackgroundBlog] 🚀 Starting generation")
+        print(f"[BackgroundBlog] 🚀 Starting generation")
         print(f"  User: {user_id}")
         print(f"  Research: {research_id}")
         print(f"  Index: {blog_index}")
         print(f"  Keyword: {target_keyword}")
+        sys.stdout.flush()
         
         # Generate content
         print(f"[BackgroundBlog] Calling generate_page_content...")
+        sys.stdout.flush()
+        
         result = generate_page_content(
             primary_keywords=primary_keywords,
             secondary_keywords=secondary_keywords,
@@ -67,6 +75,7 @@ def generate_blog_draft_background(
         print(f"[BackgroundBlog] ✅ Content generated successfully")
         print(f"  Result type: {type(result)}")
         print(f"  Result keys: {result.keys() if isinstance(result, dict) else 'N/A'}")
+        sys.stdout.flush()
         
         # Save to Firestore
         draft_data = {
@@ -87,6 +96,7 @@ def generate_blog_draft_background(
         blog_draft_ref.set(draft_data)
         
         print(f"[BackgroundBlog] ✅ Saved to Firestore at intakes/{user_id}/{research_id}/blog_draft_{blog_index}")
+        sys.stdout.flush()
         
         # Create notification in the correct collection with correct fields
         notification_data = {
@@ -102,12 +112,15 @@ def generate_blog_draft_background(
         db.collection("notifications").add(notification_data)
         print(f"[BackgroundBlog] ✅ Notification created")
         print(f"[BackgroundBlog] 🎉 Blog generation complete!\n")
+        sys.stdout.flush()
         
     except Exception as e:
         print(f"\n[BackgroundBlog] ❌ ERROR during generation:")
         print(f"  Error: {str(e)}")
         print(f"  Type: {type(e).__name__}")
         print(f"  Traceback:\n{traceback.format_exc()}\n")
+        sys.stdout.flush()
+        sys.stderr.flush()
         
         # Save error notification
         try:
@@ -123,6 +136,8 @@ def generate_blog_draft_background(
             print(f"[BackgroundBlog] Error notification created")
         except Exception as notify_err:
             print(f"[BackgroundBlog] Failed to create error notification: {notify_err}")
+        sys.stdout.flush()
+        sys.stderr.flush()
 
 
 
@@ -499,6 +514,9 @@ async def generate_page_content_post(request: Request):
 @router.post("/page-content-async/")
 async def generate_page_content_async(request: Request, background_tasks: BackgroundTasks):
     """Generate page content asynchronously - returns immediately and processes in background"""
+    print(f"\n[AsyncEndpoint] 📥 Received async blog generation request")
+    sys.stdout.flush()
+    
     # Extract and verify token from Authorization header
     auth_header = request.headers.get("Authorization")
     if not auth_header or not auth_header.startswith("Bearer "):
@@ -510,6 +528,7 @@ async def generate_page_content_async(request: Request, background_tasks: Backgr
         user_data = firebase_auth.verify_id_token(token)
     except Exception as e:
         print(f"[Token Verify] Error: {e}")
+        sys.stdout.flush()
         raise HTTPException(status_code=401, detail="Invalid or expired token")
     
     user_id = user_data.get("uid")
@@ -526,6 +545,12 @@ async def generate_page_content_async(request: Request, background_tasks: Backgr
         blog_idea_title = body.get("blog_idea_title", "")
         target_keyword = body.get("target_keyword", "")
         search_intent = body.get("search_intent", "")
+        
+        print(f"[AsyncEndpoint] Parsed request body:")
+        print(f"  research_id: {research_id}")
+        print(f"  blog_index: {blog_index}")
+        print(f"  target_keyword: {target_keyword}")
+        sys.stdout.flush()
         
         # Get user data from Firestore to check role and credits
         user_doc = db.collection("users").document(user_id).get()
@@ -547,9 +572,13 @@ async def generate_page_content_async(request: Request, background_tasks: Backgr
             db.collection("users").document(user_id).update({
                 "credits": gcfirestore.Increment(-1)
             })
+            print(f"[AsyncEndpoint] ✅ Deducted 1 credit for user {user_id}")
+            sys.stdout.flush()
         
         # Start background task using threading (more reliable than FastAPI BackgroundTasks)
-        print(f"[AsyncEndpoint] Starting background thread for user {user_id}")
+        print(f"[AsyncEndpoint] 🧵 Starting background thread for user {user_id}")
+        sys.stdout.flush()
+        
         thread = threading.Thread(
             target=generate_blog_draft_background,
             args=(
@@ -566,9 +595,11 @@ async def generate_page_content_async(request: Request, background_tasks: Backgr
                 search_intent,
             ),
             daemon=False,  # Keep thread alive even if main process ends
+            name=f"BlogGen-{user_id}-{blog_index}",
         )
         thread.start()
-        print(f"[AsyncEndpoint] Background thread started successfully")
+        print(f"[AsyncEndpoint] ✅ Background thread started successfully (name: {thread.name})")
+        sys.stdout.flush()
         
         # Return immediately
         return {
@@ -579,8 +610,10 @@ async def generate_page_content_async(request: Request, background_tasks: Backgr
     except HTTPException:
         raise
     except Exception as e:
-        print(f"[AsyncEndpoint] Error: {e}")
-        print(traceback.format_exc())
+        print(f"[AsyncEndpoint] ❌ Error: {e}")
+        print(f"[AsyncEndpoint] Traceback:\n{traceback.format_exc()}")
+        sys.stdout.flush()
+        sys.stderr.flush()
         raise HTTPException(status_code=500, detail=str(e))
 
 
