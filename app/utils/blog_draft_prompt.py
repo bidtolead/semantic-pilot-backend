@@ -6,6 +6,7 @@ Your task is to write a complete, engaging BLOG POST (NOT a service page) about 
 BLOG POST REQUIREMENTS
 ------------------------------------------------------------
 • This is an EDUCATIONAL article, not a sales page
+• Target length: approximately 1000 words (can be slightly more for quality)
 • Write to inform, teach, and provide value to readers
 • Use a conversational yet authoritative tone
 • Include practical examples, tips, and actionable advice
