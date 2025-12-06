@@ -55,7 +55,12 @@ ARTICLE STRUCTURE REQUIREMENTS
 1. H1 - Must include the PRIMARY keyword naturally
    Example: "What to Expect From an SEO Training Course in Auckland"
 
-2. INTRO (150-200 words)
+2. PAGE TITLE (SEO Title) - MUST END WITH | BRAND
+   • Include PRIMARY keyword
+   • 60-70 characters total
+   • MUST end with " | " followed by the business/brand name from the intake form
+   • Example: "Best SEO Training Course in Auckland | Your Business Name"
+   • This applies to page_title AND all page_title_variations
    • Must include the PRIMARY keyword
    • Provide a detailed, strong hook
    • Reference the user’s context from the intake form
@@ -159,9 +164,9 @@ FINAL KEYWORD LIST:
 OUTPUT FORMAT (STRICT JSON ONLY)
 --------------------------------------------------------------------
 {
-  "page_title": "...",           // SEO title for the blog (60-70 chars)
+  "page_title": "...",           // SEO title (60-70 chars) - MUST END WITH " | Business/Brand Name"
   "meta_description": "...",     // Meta description (140-160 chars) using primary + secondary keywords naturally
-  "page_title_variations": [      // Optional variations; at least 1, use page_title as first
+  "page_title_variations": [      // Optional variations; at least 1, use page_title as first - ALL must end with " | Brand"
     { "title": "..." }
   ],
   "meta_description_variations": [
@@ -203,9 +208,10 @@ MANDATORY REQUIREMENTS CHECKLIST (ALL MUST BE PRESENT):
 ✓ The external link MUST be to Wikipedia, .gov, .edu, or major news source
 ✓ faq array (3 items with question and answer)
 ✓ cta field
-✓ page_title field (60-70 chars, uses primary keyword)
+✓ page_title field (60-70 chars, uses primary keyword, MUST END WITH " | Business Name")
+✓ All page_title_variations MUST also end with " | Business Name"
 ✓ meta_description field (140-160 chars, uses primary + secondary naturally)
-✓ page_title_variations array (at least 1, first should mirror page_title)
+✓ page_title_variations array (at least 1, first should mirror page_title, ALL ending with brand)
 ✓ meta_description_variations array (at least 1, first should mirror meta_description)
 
 VALIDATION:
