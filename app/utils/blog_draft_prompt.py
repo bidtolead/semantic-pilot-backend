@@ -76,13 +76,22 @@ STRUCTURE (MUST BE DETAILED & LONG)
    - Emerging trends (if relevant)
    - Myths and misconceptions (if applicable)
 
-4. **FAQ** (5-7 questions minimum, each 60-100 words)
+4. **FAQ** (3 questions maximum)
    - Answer common reader questions in detail
    - Make answers substantial, not brief
    - Focus on providing helpful, comprehensive information
    - Use examples in FAQ answers
 
-5. **CTA** - Encouraging message to continue learning
+5. **External Link** (ONE link to a trusted source)
+   - Include exactly ONE link to a reputable, authoritative source
+   - Choose from: Wikipedia, Forbes, CNN, Harvard Business Review, TechCrunch, or similar trusted publications
+   - Link should be relevant to the article topic and add credibility
+   - Place it naturally within the relevant section
+   - Format: Include the URL and brief context about why you're linking to it
+   - Example: "According to [Source Name], [relevant fact]... Learn more: [URL]"
+   - This improves SEO through quality external citations and demonstrates authority
+
+6. **CTA** - Encouraging message to continue learning
    - "Want to learn more about [topic]? Explore our other articles on [related topics]."
    - Should be 2-3 sentences
 
@@ -123,6 +132,11 @@ OUTPUT FORMAT (JSON ONLY)
       "answer": "Helpful, detailed answer (60-100 words)..."
     }
   ],
+  "external_link": {
+    "url": "https://example.com/authoritative-source",
+    "source_name": "Source Name (e.g., Wikipedia, Forbes, CNN)",
+    "context": "Brief explanation of why this link is included and how it relates to the article"
+  },
   "cta": "Encouraging message to continue learning..."
 }
 
@@ -134,7 +148,7 @@ CRITICAL: WORD COUNT ENFORCEMENT
 Calculate total words as you write:
 • Intro: ~150-200 words
 • 8-10 sections × 100-150 words = 800-1500 words
-• FAQ (5-7 questions × 70 words) = 350-490 words
+• FAQ (3 questions × 70 words) = 210 words
 • Total target: 1000-1200 words
 
 If your current draft is less than 900 words, you MUST add more content.
