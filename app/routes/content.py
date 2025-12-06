@@ -105,7 +105,7 @@ def generate_blog_draft_background(
             "title": "Blog Draft Complete",
             "message": f'"{blog_idea_title}" is ready to view.',
             "link": f"/research/results?researchId={research_id}",
-            "createdAt": datetime.utcnow().isoformat(),  # Use createdAt, not timestamp
+            "createdAt": firestore.SERVER_TIMESTAMP,  # server-side timestamp for ordering
             "read": False,
         }
         
@@ -130,7 +130,7 @@ def generate_blog_draft_background(
                 "title": "Blog Draft Failed",
                 "message": f"Failed to generate blog: {str(e)[:200]}",
                 "link": f"/research/results?researchId={research_id}",
-                "createdAt": datetime.utcnow().isoformat(),
+                "createdAt": firestore.SERVER_TIMESTAMP,
                 "read": False,
             }
             db.collection("notifications").add(error_notification)

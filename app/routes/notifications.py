@@ -19,23 +19,27 @@ async def list_notifications(user: dict = Depends(get_current_user)):
     """List all notifications for the current user"""
     try:
         notifications_ref = db.collection("notifications")
-        query = notifications_ref.where("userId", "==", user["uid"])
+        query = (
+            notifications_ref
+            .where("userId", "==", user["uid"])
+            .order_by("createdAt", direction=firestore.Query.DESCENDING)
+            .limit(50)
+        )
         docs = query.stream()
         
         items = []
         for doc in docs:
             data = doc.to_dict()
+            created_at = data.get("createdAt")
+            created_at_iso = created_at.isoformat() if hasattr(created_at, "isoformat") else (created_at or "")
             items.append({
                 "id": doc.id,
                 "title": data.get("title", ""),
                 "message": data.get("message", ""),
                 "link": data.get("link"),
                 "read": data.get("read", False),
-                "createdAt": data.get("createdAt", "")
+                "createdAt": created_at_iso,
             })
-        
-        # Sort by createdAt descending (newest first)
-        items.sort(key=lambda x: x.get("createdAt", ""), reverse=True)
         
         return {"items": items}
     except Exception as e:
