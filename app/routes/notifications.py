@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, Body
+from pydantic import BaseModel
 from typing import Optional, List
 from datetime import datetime
 from app.utils.auth import get_current_user, admin_required
@@ -6,6 +7,11 @@ from firebase_admin import firestore
 
 router = APIRouter(prefix="/notifications", tags=["notifications"])
 db = firestore.client()
+
+
+class SelfNotification(BaseModel):
+    title: str
+    message: str
 
 @router.get("")
 async def list_notifications(user: dict = Depends(get_current_user)):
@@ -95,6 +101,31 @@ async def mark_all_read(user: dict = Depends(get_current_user)):
         return {"success": True, "updated": count}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to mark all as read: {str(e)}")
+
+
+@router.post("/self")
+async def create_self_notification(payload: SelfNotification, user: dict = Depends(get_current_user)):
+    """Allow an authenticated user to create their own notification (e.g., background jobs finishing)."""
+    try:
+        notifications_ref = db.collection("notifications")
+        timestamp = datetime.utcnow().isoformat() + "Z"
+
+        doc_ref = notifications_ref.document()
+        doc_ref.set({
+            "userId": user["uid"],
+            "title": payload.title,
+            "message": payload.message,
+            "read": False,
+            "createdAt": timestamp,
+        })
+
+        return {
+            "success": True,
+            "id": doc_ref.id,
+            "createdAt": timestamp,
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to create notification: {str(e)}")
 
 @router.post("/admin/send")
 async def admin_send_notification(
