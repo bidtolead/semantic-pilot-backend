@@ -70,6 +70,7 @@ def generate_blog_draft_background(
             user_intake_form=user_intake_form,
             research_data=research_data,
             user_id=user_id,
+            research_id=research_id,  # Add research_id parameter
         )
         
         print(f"[BackgroundBlog] ✅ Content generated successfully")
