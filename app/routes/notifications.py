@@ -19,12 +19,8 @@ async def list_notifications(user: dict = Depends(get_current_user)):
     """List all notifications for the current user"""
     try:
         notifications_ref = db.collection("notifications")
-        query = (
-            notifications_ref
-            .where("userId", "==", user["uid"])
-            .order_by("createdAt", direction=firestore.Query.DESCENDING)
-            .limit(50)
-        )
+        # Query without order_by to avoid composite index requirement
+        query = notifications_ref.where("userId", "==", user["uid"]).limit(100)
         docs = query.stream()
         
         items = []
@@ -40,6 +36,9 @@ async def list_notifications(user: dict = Depends(get_current_user)):
                 "read": data.get("read", False),
                 "createdAt": created_at_iso,
             })
+        
+        # Sort by createdAt descending (newest first) on client side
+        items.sort(key=lambda x: x.get("createdAt", ""), reverse=True)
         
         return {"items": items}
     except Exception as e:
