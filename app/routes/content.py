@@ -360,17 +360,15 @@ async def generate_page_content_post(request: Request):
         user_role = user_firestore_data.get("role", "user")
         
         # Skip credit check for admin and tester users
+        should_deduct_credit = False
         if user_role not in ["admin", "tester"]:
             # For regular users, check credits
             credits = user_firestore_data.get("credits") or 0
             if credits < 1:
                 raise HTTPException(status_code=402, detail="Insufficient credits. Please purchase more credits.")
-            
-            # Deduct 1 credit
-            db.collection("users").document(user_id).update({
-                "credits": gcfirestore.Increment(-1)
-            })
+            should_deduct_credit = True
         
+        # Start content generation immediately (don't wait for credit deduction)
         result = generate_page_content(
             primary_keywords=primary_keywords,
             secondary_keywords=secondary_keywords,
@@ -378,6 +376,16 @@ async def generate_page_content_post(request: Request):
             user_intake_form=user_intake_form,
             research_data=research_data,
             user_id=user_id,
+        )
+        
+        # Deduct credit AFTER generation succeeds
+        if should_deduct_credit:
+            try:
+                db.collection("users").document(user_id).update({
+                    "credits": gcfirestore.Increment(-1)
+                })
+            except Exception as e:
+                print(f"[Warning] Credit deduction failed but content was generated: {e}")
         )
         
         return {
@@ -424,23 +432,30 @@ async def generate_blog_ideas_post(request: Request):
         user_role = user_firestore_data.get("role", "user")
         
         # Skip credit check for admin and tester users
+        should_deduct_credit = False
         if user_role not in ["admin", "tester"]:
             # For regular users, check credits
             credits = user_firestore_data.get("credits") or 0
             if credits < 1:
                 raise HTTPException(status_code=402, detail="Insufficient credits. Please purchase more credits.")
-            
-            # Deduct 1 credit
-            db.collection("users").document(user_id).update({
-                "credits": gcfirestore.Increment(-1)
-            })
+            should_deduct_credit = True
         
+        # Start generation immediately (don't wait for credit deduction)
         result = generate_blog_ideas(
             primary_keywords=primary_keywords,
             user_intake_form=user_intake_form,
             research_data=research_data,
             user_id=user_id,
         )
+        
+        # Deduct credit AFTER generation succeeds
+        if should_deduct_credit:
+            try:
+                db.collection("users").document(user_id).update({
+                    "credits": gcfirestore.Increment(-1)
+                })
+            except Exception as e:
+                print(f"[Warning] Credit deduction failed but content was generated: {e}")
         
         return {
             "status": "success",
@@ -488,17 +503,15 @@ async def generate_meta_tags_post(request: Request):
         user_role = user_firestore_data.get("role", "user")
         
         # Skip credit check for admin and tester users
+        should_deduct_credit = False
         if user_role not in ["admin", "tester"]:
             # For regular users, check credits
             credits = user_firestore_data.get("credits") or 0
             if credits < 1:
                 raise HTTPException(status_code=402, detail="Insufficient credits. Please purchase more credits.")
-            
-            # Deduct 1 credit
-            db.collection("users").document(user_id).update({
-                "credits": gcfirestore.Increment(-1)
-            })
+            should_deduct_credit = True
         
+        # Start generation immediately (don't wait for credit deduction)
         result = generate_meta_tags(
             primary_keywords=primary_keywords,
             secondary_keywords=secondary_keywords,
@@ -507,6 +520,15 @@ async def generate_meta_tags_post(request: Request):
             research_data=research_data,
             user_id=user_id,
         )
+        
+        # Deduct credit AFTER generation succeeds
+        if should_deduct_credit:
+            try:
+                db.collection("users").document(user_id).update({
+                    "credits": gcfirestore.Increment(-1)
+                })
+            except Exception as e:
+                print(f"[Warning] Credit deduction failed but content was generated: {e}")
         
         return {
             "status": "success",
