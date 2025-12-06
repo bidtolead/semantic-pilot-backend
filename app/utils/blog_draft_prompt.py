@@ -159,6 +159,14 @@ FINAL KEYWORD LIST:
 OUTPUT FORMAT (STRICT JSON ONLY)
 --------------------------------------------------------------------
 {
+  "page_title": "...",           // SEO title for the blog (60-70 chars)
+  "meta_description": "...",     // Meta description (140-160 chars) using primary + secondary keywords naturally
+  "page_title_variations": [      // Optional variations; at least 1, use page_title as first
+    { "title": "..." }
+  ],
+  "meta_description_variations": [
+    { "description": "..." }
+  ],
   "h1": "...",
   "intro": "...",
   "sections": [
@@ -195,6 +203,10 @@ MANDATORY REQUIREMENTS CHECKLIST (ALL MUST BE PRESENT):
 ✓ The external link MUST be to Wikipedia, .gov, .edu, or major news source
 ✓ faq array (3 items with question and answer)
 ✓ cta field
+✓ page_title field (60-70 chars, uses primary keyword)
+✓ meta_description field (140-160 chars, uses primary + secondary naturally)
+✓ page_title_variations array (at least 1, first should mirror page_title)
+✓ meta_description_variations array (at least 1, first should mirror meta_description)
 
 VALIDATION:
 - Search all section content for the pattern [text](http

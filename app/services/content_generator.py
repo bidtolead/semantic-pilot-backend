@@ -514,33 +514,10 @@ def generate_page_content(
                     result_json["intro"] += " [Learn more on Wikipedia](https://en.wikipedia.org)."
                     print(f"[INFO] Added generic Wikipedia link as last resort")
     
-    # Save to Firestore if research_id is provided
-    if research_id:
-        doc_ref = (
-            db.collection("intakes")
-            .document(user_id)
-            .collection(research_id)
-            .document("page_content")
-        )
-        
-        # Payload for Firestore (includes SERVER_TIMESTAMP)
-        firestore_payload = {
-            "h1": result_json.get("h1", ""),
-            "intro": result_json.get("intro", ""),
-            "sections": result_json.get("sections", []),
-            "faq": result_json.get("faq", []),
-            "cta": result_json.get("cta", ""),
-            "token_usage": token_usage,
-            "status": "completed",
-            "createdAt": gcfirestore.SERVER_TIMESTAMP,
-        }
-        
-        doc_ref.set(firestore_payload)
-    
     # Update user metrics
     _update_user_metrics(user_id, token_usage, cost, model)
     
-    # Generate meta tags alongside page content using the same keywords
+    # Generate meta tags (fallback only; primary source is blog prompt)
     meta_tags_result = generate_meta_tags(
         primary_keywords=primary_keywords or (keywords.get("primary_keywords", []) if keywords else []),
         secondary_keywords=secondary_keywords or (keywords.get("secondary_keywords", []) if keywords else []),
@@ -549,16 +526,62 @@ def generate_page_content(
         user_id=user_id,
         research_id=research_id,
     )
+
+    # Prefer blog-prompt title/description; fallback to meta tags if absent
+    page_title_variations = result_json.get("page_title_variations") or []
+    if not page_title_variations:
+        if result_json.get("page_title"):
+            page_title_variations = [{"title": result_json.get("page_title") }]
+        elif result_json.get("h1"):
+            page_title_variations = [{"title": result_json.get("h1") }]
+    if not page_title_variations:
+        page_title_variations = meta_tags_result.get("page_title_variations", [])
+
+    meta_description_variations = result_json.get("meta_description_variations") or []
+    if not meta_description_variations and result_json.get("meta_description"):
+        meta_description_variations = [{"description": result_json.get("meta_description") }]
+    if not meta_description_variations and result_json.get("intro"):
+        meta_description_variations = [{"description": result_json.get("intro") }]
+    if not meta_description_variations:
+        meta_description_variations = meta_tags_result.get("meta_description_variations", [])
     
-    # Return payload without SERVER_TIMESTAMP sentinel, including generated meta tags
+    # Save to Firestore if research_id is provided (store the blog-prompt SEO fields with fallbacks)
+    if research_id:
+        doc_ref = (
+            db.collection("intakes")
+            .document(user_id)
+            .collection(research_id)
+            .document("page_content")
+        )
+        
+        firestore_payload = {
+            "h1": result_json.get("h1", ""),
+            "intro": result_json.get("intro", ""),
+            "sections": result_json.get("sections", []),
+            "faq": result_json.get("faq", []),
+            "cta": result_json.get("cta", ""),
+            "page_title": result_json.get("page_title", ""),
+            "meta_description": result_json.get("meta_description", ""),
+            "page_title_variations": page_title_variations,
+            "meta_description_variations": meta_description_variations,
+            "token_usage": token_usage,
+            "status": "completed",
+            "createdAt": gcfirestore.SERVER_TIMESTAMP,
+        }
+        
+        doc_ref.set(firestore_payload)
+    
+    # Return payload without SERVER_TIMESTAMP sentinel, including preferred blog-prompt SEO fields
     return {
         "h1": result_json.get("h1", ""),
         "intro": result_json.get("intro", ""),
         "sections": result_json.get("sections", []),
         "faq": result_json.get("faq", []),
         "cta": result_json.get("cta", ""),
-        "page_title_variations": meta_tags_result.get("page_title_variations", []),
-        "meta_description_variations": meta_tags_result.get("meta_description_variations", []),
+        "page_title": result_json.get("page_title", ""),
+        "meta_description": result_json.get("meta_description", ""),
+        "page_title_variations": page_title_variations,
+        "meta_description_variations": meta_description_variations,
         "meta_notes": meta_tags_result.get("notes", {}),
         "token_usage": token_usage,
         "status": "completed",
