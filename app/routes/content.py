@@ -88,16 +88,18 @@ def generate_blog_draft_background(
         
         print(f"[BackgroundBlog] ✅ Saved to Firestore at intakes/{user_id}/{research_id}/blog_draft_{blog_index}")
         
-        # Create notification
+        # Create notification in the correct collection with correct fields
         notification_data = {
+            "userId": user_id,  # Add userId field for queries
             "title": "Blog Draft Complete",
             "message": f'"{blog_idea_title}" is ready to view.',
             "link": f"/research/results?researchId={research_id}",
-            "timestamp": gcfirestore.SERVER_TIMESTAMP,
+            "createdAt": datetime.utcnow().isoformat(),  # Use createdAt, not timestamp
             "read": False,
         }
         
-        db.collection("users").document(user_id).collection("notifications").add(notification_data)
+        # Save to the correct notifications collection (at top level, not under users)
+        db.collection("notifications").add(notification_data)
         print(f"[BackgroundBlog] ✅ Notification created")
         print(f"[BackgroundBlog] 🎉 Blog generation complete!\n")
         
@@ -110,13 +112,14 @@ def generate_blog_draft_background(
         # Save error notification
         try:
             error_notification = {
+                "userId": user_id,
                 "title": "Blog Draft Failed",
                 "message": f"Failed to generate blog: {str(e)[:200]}",
                 "link": f"/research/results?researchId={research_id}",
-                "timestamp": gcfirestore.SERVER_TIMESTAMP,
+                "createdAt": datetime.utcnow().isoformat(),
                 "read": False,
             }
-            db.collection("users").document(user_id).collection("notifications").add(error_notification)
+            db.collection("notifications").add(error_notification)
             print(f"[BackgroundBlog] Error notification created")
         except Exception as notify_err:
             print(f"[BackgroundBlog] Failed to create error notification: {notify_err}")
