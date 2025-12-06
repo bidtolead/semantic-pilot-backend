@@ -351,15 +351,18 @@ async def generate_page_content_post(request: Request):
         user_intake_form = body.get("user_intake_form", {})
         research_data = body.get("research_data", {})
         
+        # Get user data from Firestore to check role
+        user_doc = db.collection("users").document(user_id).get()
+        if not user_doc.exists:
+            raise HTTPException(status_code=404, detail="User not found")
+        
+        user_firestore_data = user_doc.to_dict() or {}
+        user_role = user_firestore_data.get("role", "user")
+        
         # Check if user is admin
-        user_role = user_data.get("role", "user")
         if user_role != "admin":
             # For regular users, check credits
-            user_doc = db.collection("users").document(user_id).get()
-            if not user_doc.exists():
-                raise HTTPException(status_code=404, detail="User not found")
-            
-            credits = user_doc.get("credits") or 0
+            credits = user_firestore_data.get("credits") or 0
             if credits < 1:
                 raise HTTPException(status_code=402, detail="Insufficient credits. Please purchase more credits.")
             
@@ -412,15 +415,18 @@ async def generate_blog_ideas_post(request: Request):
         user_intake_form = body.get("user_intake_form", {})
         research_data = body.get("research_data", {})
         
+        # Get user data from Firestore to check role
+        user_doc = db.collection("users").document(user_id).get()
+        if not user_doc.exists:
+            raise HTTPException(status_code=404, detail="User not found")
+        
+        user_firestore_data = user_doc.to_dict() or {}
+        user_role = user_firestore_data.get("role", "user")
+        
         # Check if user is admin
-        user_role = user_data.get("role", "user")
         if user_role != "admin":
             # For regular users, check credits
-            user_doc = db.collection("users").document(user_id).get()
-            if not user_doc.exists():
-                raise HTTPException(status_code=404, detail="User not found")
-            
-            credits = user_doc.get("credits") or 0
+            credits = user_firestore_data.get("credits") or 0
             if credits < 1:
                 raise HTTPException(status_code=402, detail="Insufficient credits. Please purchase more credits.")
             
@@ -473,15 +479,18 @@ async def generate_meta_tags_post(request: Request):
         user_intake_form = body.get("user_intake_form", {})
         research_data = body.get("research_data", {})
         
+        # Get user data from Firestore to check role
+        user_doc = db.collection("users").document(user_id).get()
+        if not user_doc.exists:
+            raise HTTPException(status_code=404, detail="User not found")
+        
+        user_firestore_data = user_doc.to_dict() or {}
+        user_role = user_firestore_data.get("role", "user")
+        
         # Check if user is admin
-        user_role = user_data.get("role", "user")
         if user_role != "admin":
             # For regular users, check credits
-            user_doc = db.collection("users").document(user_id).get()
-            if not user_doc.exists():
-                raise HTTPException(status_code=404, detail="User not found")
-            
-            credits = user_doc.get("credits") or 0
+            credits = user_firestore_data.get("credits") or 0
             if credits < 1:
                 raise HTTPException(status_code=402, detail="Insufficient credits. Please purchase more credits.")
             
