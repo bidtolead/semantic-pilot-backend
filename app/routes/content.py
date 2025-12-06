@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, Depends, Query, Request
+from fastapi import APIRouter, HTTPException, Depends, Query, Request, BackgroundTasks
 from app.utils.auth import verify_token
 from app.services.firestore import db
 from app.services.content_generator import (
@@ -13,6 +13,9 @@ from app.services.content_generator import (
 from google.cloud import firestore as gcfirestore
 from slowapi import Limiter
 from slowapi.util import get_remote_address
+import asyncio
+import uuid
+from datetime import datetime
 
 router = APIRouter(prefix="/content", tags=["content"])
 limiter = Limiter(key_func=get_remote_address)
@@ -25,6 +28,83 @@ def get_user_id(request: Request) -> str:
     if len(path_parts) > 3:
         return path_parts[3]
     return "anonymous"
+
+
+def generate_blog_draft_background(
+    user_id: str,
+    research_id: str,
+    blog_index: int,
+    primary_keywords: list,
+    secondary_keywords: list,
+    long_tail_keywords: list,
+    user_intake_form: dict,
+    research_data: dict,
+    blog_idea_title: str,
+    target_keyword: str,
+    search_intent: str,
+):
+    """Background task to generate blog draft and save to Firestore"""
+    try:
+        print(f"[BackgroundBlog] Starting generation for user {user_id}, research {research_id}, index {blog_index}")
+        
+        # Generate content
+        result = generate_page_content(
+            primary_keywords=primary_keywords,
+            secondary_keywords=secondary_keywords,
+            long_tail_keywords=long_tail_keywords,
+            user_intake_form=user_intake_form,
+            research_data=research_data,
+            user_id=user_id,
+        )
+        
+        print(f"[BackgroundBlog] Content generated successfully")
+        
+        # Save to Firestore
+        draft_data = {
+            **result,
+            "blogIdeaIndex": blog_index,
+            "blogIdeaTitle": blog_idea_title,
+            "targetKeyword": target_keyword,
+            "searchIntent": search_intent,
+            "createdAt": datetime.utcnow().isoformat(),
+        }
+        
+        blog_draft_ref = (
+            db.collection("intakes")
+            .document(user_id)
+            .collection(research_id)
+            .document(f"blog_draft_{blog_index}")
+        )
+        blog_draft_ref.set(draft_data)
+        
+        print(f"[BackgroundBlog] Saved to Firestore")
+        
+        # Create notification
+        notification_data = {
+            "title": "Blog Draft Complete",
+            "message": f'"{blog_idea_title}" is ready to view.',
+            "link": f"/research/results?researchId={research_id}",
+            "timestamp": gcfirestore.SERVER_TIMESTAMP,
+            "read": False,
+        }
+        
+        db.collection("users").document(user_id).collection("notifications").add(notification_data)
+        print(f"[BackgroundBlog] Notification created")
+        
+    except Exception as e:
+        print(f"[BackgroundBlog] Error: {e}")
+        # Save error notification
+        try:
+            error_notification = {
+                "title": "Blog Draft Failed",
+                "message": f"Failed to generate blog: {str(e)}",
+                "link": f"/research/results?researchId={research_id}",
+                "timestamp": gcfirestore.SERVER_TIMESTAMP,
+                "read": False,
+            }
+            db.collection("users").document(user_id).collection("notifications").add(error_notification)
+        except:
+            pass
 
 
 
@@ -390,6 +470,86 @@ async def generate_page_content_post(request: Request):
         return {
             "status": "success",
             "data": result,
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/page-content-async/")
+async def generate_page_content_async(request: Request, background_tasks: BackgroundTasks):
+    """Generate page content asynchronously - returns immediately and processes in background"""
+    # Extract and verify token from Authorization header
+    auth_header = request.headers.get("Authorization")
+    if not auth_header or not auth_header.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Missing or invalid Authorization header")
+    
+    try:
+        from firebase_admin import auth as firebase_auth
+        token = auth_header.replace("Bearer ", "")
+        user_data = firebase_auth.verify_id_token(token)
+    except Exception as e:
+        print(f"[Token Verify] Error: {e}")
+        raise HTTPException(status_code=401, detail="Invalid or expired token")
+    
+    user_id = user_data.get("uid")
+    
+    try:
+        body = await request.json()
+        primary_keywords = body.get("primary_keywords", [])
+        secondary_keywords = body.get("secondary_keywords", [])
+        long_tail_keywords = body.get("long_tail_keywords", [])
+        user_intake_form = body.get("user_intake_form", {})
+        research_data = body.get("research_data", {})
+        research_id = body.get("research_id", "")
+        blog_index = body.get("blog_index", 0)
+        blog_idea_title = body.get("blog_idea_title", "")
+        target_keyword = body.get("target_keyword", "")
+        search_intent = body.get("search_intent", "")
+        
+        # Get user data from Firestore to check role and credits
+        user_doc = db.collection("users").document(user_id).get()
+        if not user_doc.exists:
+            raise HTTPException(status_code=404, detail="User not found")
+        
+        user_firestore_data = user_doc.to_dict() or {}
+        user_role = user_firestore_data.get("role", "user")
+        
+        # Check credits before starting background task
+        should_deduct_credit = False
+        if user_role not in ["admin", "tester"]:
+            credits = user_firestore_data.get("credits") or 0
+            if credits < 1:
+                raise HTTPException(status_code=402, detail="Insufficient credits. Please purchase more credits.")
+            should_deduct_credit = True
+            
+            # Deduct credit immediately to prevent double-spending
+            db.collection("users").document(user_id).update({
+                "credits": gcfirestore.Increment(-1)
+            })
+        
+        # Start background task
+        background_tasks.add_task(
+            generate_blog_draft_background,
+            user_id=user_id,
+            research_id=research_id,
+            blog_index=blog_index,
+            primary_keywords=primary_keywords,
+            secondary_keywords=secondary_keywords,
+            long_tail_keywords=long_tail_keywords,
+            user_intake_form=user_intake_form,
+            research_data=research_data,
+            blog_idea_title=blog_idea_title,
+            target_keyword=target_keyword,
+            search_intent=search_intent,
+        )
+        
+        # Return immediately
+        return {
+            "status": "processing",
+            "message": "Blog draft generation started. You'll receive a notification when complete.",
         }
         
     except HTTPException:
