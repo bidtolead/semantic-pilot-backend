@@ -75,6 +75,14 @@ def get_current_user(authorization: str | None = Header(default=None)):
                 if key not in data:
                     data[key] = default_value
 
+            # Check role restriction: only admin and tester can login
+            user_role = data.get("role", "user")
+            if user_role not in ["admin", "tester"]:
+                raise HTTPException(
+                    status_code=403,
+                    detail="Access restricted. Only admin and tester accounts can login."
+                )
+
             # Always update lastLoginAt on each request
             data["lastLoginAt"] = datetime.utcnow().isoformat()
             data["uid"] = uid
@@ -87,20 +95,11 @@ def get_current_user(authorization: str | None = Header(default=None)):
         # ----------------------------------------
         # CASE 2 — USER DOES NOT EXIST (CREATE)
         # ----------------------------------------
-        new_user = DEFAULT_USER_FIELDS.copy()
-        new_user["email"] = email
-        new_user["uid"] = uid
-        new_user["createdAt"] = datetime.utcnow().isoformat()
-        new_user["lastLoginAt"] = datetime.utcnow().isoformat()
-        
-        # Extract first name from Google displayName if available
-        display_name = decoded.get("name")
-        if display_name and not new_user["firstName"]:
-            new_user["firstName"] = display_name.split()[0] if display_name else None
-
-        user_ref.set(new_user)
-
-        return new_user
+        # Block new user registration - only admins/testers allowed
+        raise HTTPException(
+            status_code=403,
+            detail="Registration is currently restricted. Please contact support for access."
+        )
 
     except Exception as e:
         raise HTTPException(status_code=401, detail=str(e))
