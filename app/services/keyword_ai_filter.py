@@ -322,19 +322,7 @@ def run_keyword_ai_filter(
             print(f"   DataForSEO raw data keys: {list(raw_data.keys())}")
             print(f"   Full DataForSEO data for this keyword: {raw_data}")
             
-            # PRESERVE AI-generated fields (selection_rationale, best_use_case, keyword_intent, match_type, best_match_type, use_case)
-            # These are critical for the frontend UI to show "Why" column and other insights
-            ai_fields_to_preserve = [
-                "selection_rationale", 
-                "best_use_case", 
-                "keyword_intent",
-                "match_type",
-                "best_match_type",
-                "use_case",
-            ]
-            preserved_ai_data = {field: kw.get(field) for field in ai_fields_to_preserve if field in kw}
-            
-            # Replace metrics with actual DataForSEO data
+            # Replace ALL fields with actual DataForSEO data
             # Use "-" for missing values instead of None for clean UI display
             kw["search_volume"] = raw_data.get("avg_monthly_searches") if raw_data.get("avg_monthly_searches") is not None else "-"
             kw["competition"] = raw_data.get("competition") if raw_data.get("competition") is not None else "-"
@@ -357,9 +345,6 @@ def run_keyword_ai_filter(
             # Add formatted bids in USD (as provided by DataForSEO)
             kw["low_top_of_page_bid"] = format_bid(low_bid_micros, currency)
             kw["high_top_of_page_bid"] = format_bid(high_bid_micros, currency)
-            
-            # RESTORE preserved AI fields after adding DataForSEO metrics
-            kw.update(preserved_ai_data)
             
             # Add YoY trend data
             yoy = raw_data.get("yoy_change")
