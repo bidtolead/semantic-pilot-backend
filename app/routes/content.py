@@ -10,6 +10,7 @@ from app.services.content_generator import (
     generate_google_ads_negative_keywords,
     generate_google_ads_structure,
 )
+from app.services.google_ads_utm import generate_google_ads_utm
 from google.cloud import firestore as gcfirestore
 from slowapi import Limiter
 from slowapi.util import get_remote_address
@@ -1025,6 +1026,73 @@ async def handle_structure(
         
         return {"status": "success", "data": result}
         
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/utm-tags/{user_id}/{research_id}")
+@limiter.limit("50/hour", key_func=get_user_id)
+async def handle_utm_tags(
+    request: Request,
+    user_id: str,
+    research_id: str,
+    token_data: dict = Depends(verify_token),
+    generate: bool = Query(default=True),
+):
+    """Generate or retrieve Google Ads UTM tags. ADMIN AND TESTER. Rate limited: 50/hour."""
+    uid = token_data["uid"]
+    user_ref = db.collection("users").document(uid)
+    user_doc = user_ref.get()
+    user_role = user_doc.to_dict().get("role") if user_doc.exists else None
+
+    # Allow both admin and tester roles
+    if not user_doc.exists or user_role not in ["admin", "tester"]:
+        raise HTTPException(status_code=403, detail="Admin or Tester access required")
+
+    if uid != user_id:
+        raise HTTPException(status_code=403, detail="Not authorized")
+
+    try:
+        doc_ref = db.collection("intakes").document(user_id).collection(research_id).document("utm")
+        doc = doc_ref.get()
+
+        if doc.exists and not generate:
+            return {"status": "success", "data": doc.to_dict()}
+
+        user_snapshot = user_ref.get()
+        if not user_snapshot.exists:
+            raise HTTPException(status_code=404, detail="User not found")
+
+        user_data = user_snapshot.to_dict() or {}
+        if user_data.get("credits", 0) < 1:
+            raise HTTPException(status_code=402, detail="Insufficient credits")
+
+        user_ref.update({
+            "credits": gcfirestore.Increment(-1),
+            "lastActivity": gcfirestore.SERVER_TIMESTAMP,
+        })
+
+        doc_id = f"{user_id}_{research_id}"
+        intake_doc = db.collection("research_intakes").document(doc_id).get()
+        if not intake_doc.exists:
+            raise HTTPException(status_code=404, detail="Intake not found")
+
+        keywords_doc = db.collection("intakes").document(user_id).collection(research_id).document("keyword_research").get()
+        if not keywords_doc.exists:
+            raise HTTPException(status_code=404, detail="Keywords not found")
+
+        result = generate_google_ads_utm(
+            intake=intake_doc.to_dict(),
+            keywords_doc=keywords_doc.to_dict(),
+        )
+
+        # Persist for retrieval
+        doc_ref.set(result)
+
+        return {"status": "success", "data": result}
+
     except HTTPException:
         raise
     except Exception as e:
