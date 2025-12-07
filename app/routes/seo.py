@@ -217,8 +217,11 @@ async def run_keyword_research(
     daily_credits_used = user_data.get("dailyCreditsUsed", 0)
     user_role = user_data.get("role", "user")
     
-    # Set daily limit based on role: 50 for admin, 5 for regular users
-    daily_limit = 50 if user_role == "admin" else user_data.get("dailyLimit", 5)
+    # Set daily limit based on role: unlimited for admin/tester, 5 for regular users
+    if user_role == "admin" or user_role == "tester":
+        daily_limit = float('inf')  # Unlimited daily credits for admin and tester
+    else:
+        daily_limit = user_data.get("dailyLimit", 5)
     monthly_credits = user_data.get("monthlyCredits", 30)
     last_daily_reset = user_data.get("lastDailyReset")
     last_credit_reset = user_data.get("lastCreditReset")
