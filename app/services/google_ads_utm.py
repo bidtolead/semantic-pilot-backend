@@ -1,6 +1,7 @@
 import json
 import os
 from typing import Dict, Any, List
+from datetime import datetime, date
 
 from openai import OpenAI
 
@@ -13,6 +14,21 @@ def get_openai_client():
     if _client is None:
         _client = OpenAI()
     return _client
+
+
+def _json_default(o):
+    """Best-effort serializer for Firestore timestamps and datetimes."""
+    if isinstance(o, (datetime, date)):
+        try:
+            return o.isoformat()
+        except Exception:
+            return str(o)
+    if hasattr(o, "isoformat"):
+        try:
+            return o.isoformat()
+        except Exception:
+            return str(o)
+    return str(o)
 
 def _serialize_keywords(keywords_doc: Dict[str, Any]) -> List[str]:
     keywords: List[str] = []
@@ -28,8 +44,8 @@ def generate_google_ads_utm(*, intake: Dict[str, Any], keywords_doc: Dict[str, A
     final_keywords = _serialize_keywords(keywords_doc)
 
     prompt = GOOGLE_ADS_UTM_PROMPT
-    prompt = prompt.replace("{user_intake_form}", json.dumps(intake, ensure_ascii=False, indent=2))
-    prompt = prompt.replace("{final_keywords}", json.dumps(final_keywords, ensure_ascii=False, indent=2))
+    prompt = prompt.replace("{user_intake_form}", json.dumps(intake, ensure_ascii=False, indent=2, default=_json_default))
+    prompt = prompt.replace("{final_keywords}", json.dumps(final_keywords, ensure_ascii=False, indent=2, default=_json_default))
 
     response = get_openai_client().chat.completions.create(
         model=os.getenv("OPENAI_MODEL", "gpt-4o-mini"),
