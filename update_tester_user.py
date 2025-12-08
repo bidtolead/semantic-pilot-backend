@@ -8,7 +8,7 @@ import sys
 
 # Initialize Firebase
 if not firebase_admin._apps:
-    creds = credentials.Certificate('/Users/timur/semantic-pilot/service-account.json')
+    creds = credentials.Certificate('app/keys/serviceAccountKey.json')
     firebase_admin.initialize_app(creds)
 
 db = firestore.client()

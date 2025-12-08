@@ -10,7 +10,7 @@ from app.routes.seo import router as seo_router
 from app.routes.auth import router as auth_router
 from app.routes.account import router as account_router
 from app.routes.firestore import router as firestore_router
-from app.routes.test_db import router as test_db_router
+# from app.routes.test_db import router as test_db_router  # Removed: not for production
 from app.routes.admin import router as admin_router
 from app.routes.activity import router as activity_router
 from app.routes.content import router as content_router
@@ -65,7 +65,7 @@ app.include_router(seo_router)
 app.include_router(auth_router)
 app.include_router(account_router)
 app.include_router(firestore_router)
-app.include_router(test_db_router)
+# app.include_router(test_db_router)  # Removed: not for production
 
 # Admin endpoints
 app.include_router(admin_router)

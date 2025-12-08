@@ -54,3 +54,11 @@ build/
 dist/
 *.egg-info/
 .cache/venv/
+
+# Test and debug scripts
+test_*.py
+debug_*.py
+check_*.py
+
+# Temporary files
+*.save

@@ -1,2 +1,0 @@
-# This file will store pre-filtered locations
-# We'll generate this once locally and commit it
