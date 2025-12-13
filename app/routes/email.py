@@ -1,8 +1,11 @@
+import logging
 from fastapi import APIRouter, Header, HTTPException
 from firebase_admin import auth as firebase_auth
 from app.services.firestore import db
 from app.services.email_service import send_email, send_bulk_email
 from typing import Optional
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/admin/email", tags=["Admin Email"])
 
@@ -115,9 +118,11 @@ def send_user_email(
             raise HTTPException(status_code=400, detail="Invalid recipient format")
     
     except ValueError as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Email send value error: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Email configuration error. Please contact support.")
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to send email: {str(e)}")
+        logger.error(f"Failed to send email: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to send email. Please try again later.")
 
 
 @router.post("/send-to-all")
@@ -211,6 +216,8 @@ def send_to_all_users(
             "details": result
         }
     except ValueError as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Bulk email value error: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Email configuration error. Please contact support.")
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to send emails: {str(e)}")
+        logger.error(f"Failed to send emails: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to send emails. Please try again later.")

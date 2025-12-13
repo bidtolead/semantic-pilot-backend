@@ -1,3 +1,4 @@
+import logging
 from fastapi import APIRouter, HTTPException, Header
 from app.services.firestore import db
 import firebase_admin
@@ -5,6 +6,7 @@ from firebase_admin import auth as firebase_auth
 from datetime import datetime
 import uuid
 
+logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/support", tags=["support"])
 
 
@@ -71,7 +73,8 @@ def report_issue(body: dict, authorization: str | None = Header(default=None)):
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to submit issue report: {str(e)}")
+        logger.error(f"Failed to submit issue report: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to submit issue report. Please try again later.")
 
 
 # ----------------------------------------
@@ -111,4 +114,5 @@ def get_user_issues(authorization: str | None = Header(default=None)):
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to retrieve issues: {str(e)}")
+        logger.error(f"Failed to retrieve issues: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to retrieve issues. Please try again later.")

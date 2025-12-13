@@ -1,3 +1,4 @@
+import logging
 from fastapi import APIRouter, HTTPException, Depends, Query, Request, BackgroundTasks
 from app.utils.auth import verify_token
 from app.services.firestore import db
@@ -21,6 +22,7 @@ import threading
 import traceback
 import sys
 
+logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/content", tags=["content"])
 limiter = Limiter(key_func=get_remote_address)
 
@@ -242,10 +244,8 @@ async def handle_blog_ideas(
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-@router.get("/meta-tags/{user_id}/{research_id}")
+        logger.error(f"Blog ideas generation failed: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Content generation failed. Please try again later.")
 async def handle_meta_tags(
     user_id: str,
     research_id: str,
@@ -349,7 +349,8 @@ async def handle_meta_tags(
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Meta tags generation failed: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Content generation failed. Please try again later.")
 
 
 @router.get("/page-content/{user_id}/{research_id}")
@@ -438,7 +439,8 @@ async def handle_page_content(
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Page content generation failed: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Content generation failed. Please try again later.")
 
 
 # POST endpoints for direct content generation (used by frontend)
@@ -512,7 +514,8 @@ async def generate_page_content_post(request: Request):
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Page content POST generation failed: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Content generation failed. Please try again later.")
 
 
 @router.post("/page-content-async/")
@@ -614,11 +617,8 @@ async def generate_page_content_async(request: Request, background_tasks: Backgr
     except HTTPException:
         raise
     except Exception as e:
-        print(f"[AsyncEndpoint] ❌ Error: {e}")
-        print(f"[AsyncEndpoint] Traceback:\n{traceback.format_exc()}")
-        sys.stdout.flush()
-        sys.stderr.flush()
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Async page content generation failed: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Content generation failed. Please try again later.")
 
 
 @router.post("/blog-ideas/")
@@ -687,7 +687,8 @@ async def generate_blog_ideas_post(request: Request):
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Blog ideas POST generation failed: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Content generation failed. Please try again later.")
 
 
 @router.post("/meta-tags/")
@@ -760,7 +761,8 @@ async def generate_meta_tags_post(request: Request):
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Meta tags POST generation failed: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Content generation failed. Please try again later.")
 
 
 @router.get("/ad-copy/{user_id}/{research_id}")
@@ -829,7 +831,8 @@ async def handle_ad_copy(
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Ad copy generation failed: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Content generation failed. Please try again later.")
 
 
 @router.get("/landing-page/{user_id}/{research_id}")
@@ -896,7 +899,8 @@ async def handle_landing_page(
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Landing page generation failed: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Content generation failed. Please try again later.")
 
 
 @router.get("/negative-keywords/{user_id}/{research_id}")
@@ -963,7 +967,8 @@ async def handle_negative_keywords(
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Negative keywords generation failed: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Content generation failed. Please try again later.")
 
 @router.get("/structure/{user_id}/{research_id}")
 @limiter.limit("50/hour", key_func=get_user_id)
@@ -1029,7 +1034,8 @@ async def handle_structure(
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Campaign structure generation failed: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Content generation failed. Please try again later.")
 
 
 @router.get("/utm-tags/{user_id}/{research_id}")
@@ -1096,4 +1102,5 @@ async def handle_utm_tags(
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"UTM tags generation failed: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Content generation failed. Please try again later.")

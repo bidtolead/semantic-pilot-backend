@@ -1,6 +1,9 @@
 import os
 import json
+import logging
 from typing import Any, Dict, List, Optional
+
+logger = logging.getLogger(__name__)
 
 # Lazy import OpenAI
 from datetime import datetime, date
@@ -129,7 +132,7 @@ def run_keyword_ai_filter(
         estimated_tokens = len(encoding.encode(prompt))
         
         if estimated_tokens > MAX_TOKENS:
-            print(f"⚠️  Token estimate {estimated_tokens} exceeds {MAX_TOKENS}. Reducing keywords...")
+            logger.debug(f"Token estimate {estimated_tokens} exceeds {MAX_TOKENS}. Reducing keywords...")
             # Binary search to find safe keyword count
             low, high = 10, len(limited_keywords)
             safe_count = 10
@@ -161,10 +164,10 @@ def run_keyword_ai_filter(
                 json.dumps(limited_keywords, ensure_ascii=False, indent=2, default=_json_default),
             )
             final_tokens = len(encoding.encode(prompt))
-            print(f"✓ Reduced to {safe_count} keywords ({final_tokens} tokens)")
+            logger.debug(f"Reduced to {safe_count} keywords ({final_tokens} tokens)")
     except Exception as e:
         # If tiktoken fails, continue with initial limit and let OpenAI handle it
-        print(f"Token estimation failed: {e}. Proceeding with {len(limited_keywords)} keywords.")
+        logger.warning(f"Token estimation failed: {e}. Proceeding with {len(limited_keywords)} keywords.")
 
     # Load model from system settings or use default
     model = "gpt-4o-mini"  # default
@@ -258,14 +261,10 @@ def run_keyword_ai_filter(
         snippet = content[:300]
         raise ValueError(f"Invalid JSON from model: {e}: {snippet}")
 
-    # Debug: Log the raw AI response
-    print(f"\n=== RAW AI RESPONSE ===")
-    print(f"AI JSON keys: {list(result_json.keys())}")
-    print(f"Primary count from AI: {len(result_json.get('primary_keywords', []))}")
-    print(f"Secondary count from AI: {len(result_json.get('secondary_keywords', []))}")
-    print(f"Long-tail count from AI: {len(result_json.get('long_tail_keywords', []))}")
-    if result_json.get('primary_keywords'):
-        print(f"Sample primary: {result_json['primary_keywords'][0]}")
+    # Log AI response summary
+    logger.debug(f"AI returned: primary={len(result_json.get('primary_keywords', []))}, "
+                 f"secondary={len(result_json.get('secondary_keywords', []))}, "
+                 f"long_tail={len(result_json.get('long_tail_keywords', []))}")
     
     # Validate and correct search_volume values against raw data
     # Also merge in all Google Ads metrics (competition, bid data, etc.)
@@ -276,20 +275,7 @@ def run_keyword_ai_filter(
         if isinstance(item, dict)
     }
     
-    print(f"\n=== KEYWORD VALIDATION DEBUG ===")
-    print(f"Raw keyword map has {len(raw_keyword_map)} keywords")
-    print(f"Sample raw keywords: {list(raw_keyword_map.keys())[:5]}")
-    
-    # Debug: Show what AI returned
-    ai_primary = result_json.get("primary_keywords", [])
-    ai_secondary = result_json.get("secondary_keywords", [])
-    ai_longtail = result_json.get("long_tail_keywords", [])
-    print(f"\n=== AI RETURNED ===")
-    print(f"Primary: {len(ai_primary)} keywords")
-    print(f"Secondary: {len(ai_secondary)} keywords")
-    print(f"Long-tail: {len(ai_longtail)} keywords")
-    if ai_primary:
-        print(f"First primary keyword from AI: '{ai_primary[0].get('keyword')}'")
+    logger.debug(f"Raw keyword map has {len(raw_keyword_map)} keywords")
     
     def validate_and_fix_search_volumes(keywords_list):
         """Ensure search_volume matches avg_monthly_searches from raw data and merge Google Ads metrics.
@@ -312,16 +298,10 @@ def run_keyword_ai_filter(
             
             # CRITICAL FIX: If keyword doesn't exist in raw data, SKIP it entirely
             if not raw_data:
-                print(f"⚠️  SKIPPING '{keyword_text}' - not found in DataForSEO raw data")
-                print(f"   AI made up search_volume: {kw.get('search_volume')} (invalid)")
+                logger.debug(f"Skipping '{keyword_text}' - not found in DataForSEO raw data")
                 continue  # Don't add this keyword to results
             
             # Keyword exists in raw data - merge all metrics
-            print(f"✅ MATCH for '{keyword_text}'")
-            print(f"   AI gave: {kw.get('search_volume')} → Using DataForSEO avg_monthly_searches: {raw_data.get('avg_monthly_searches')}")
-            print(f"   DataForSEO raw data keys: {list(raw_data.keys())}")
-            print(f"   Full DataForSEO data for this keyword: {raw_data}")
-            
             # Replace ALL fields with actual DataForSEO data
             # Use "-" for missing values instead of None for clean UI display
             kw["search_volume"] = raw_data.get("avg_monthly_searches") if raw_data.get("avg_monthly_searches") is not None else "-"

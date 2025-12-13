@@ -1,3 +1,4 @@
+import logging
 from fastapi import APIRouter, Header, HTTPException, Request
 from app.services.firestore import db
 from firebase_admin import auth as firebase_auth
@@ -5,6 +6,7 @@ from app.core.config import STRIPE_SECRET_KEY, STRIPE_PRICE_PRO, STRIPE_WEBHOOK_
 import stripe
 from datetime import datetime
 
+logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/payments", tags=["Payments"])
 
 if STRIPE_SECRET_KEY:
@@ -58,7 +60,8 @@ def create_checkout_session(authorization: str | None = Header(default=None)):
         )
         return {"status": "ok", "url": session.url, "id": session.id}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Checkout session creation failed: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to create checkout session. Please try again.")
 
 
 @router.post("/webhook")

@@ -250,26 +250,16 @@ def fetch_keyword_ideas(
         "search_partners": False,
     }]
     
-    print(f"🔍 Step 2 payload: keywords={len(keyword_list)}, location_code={int(location_name)}, language={language_name}", flush=True)
+    logger.debug(f"Step 2 payload: keywords={len(keyword_list)}, location_code={int(location_name)}, language={language_name}")
     
     try:
         volume_resp = requests.post(volume_endpoint, json=volume_payload, headers=_auth_header(), timeout=120)
         volume_resp.raise_for_status()
         volume_data = volume_resp.json()
         
-        # Debug Step 2 response structure
-        print(f"🔍 Step 2 response status: {volume_data.get('status_code')}", flush=True)
-        print(f"🔍 Step 2 tasks count: {len(volume_data.get('tasks', []))}", flush=True)
-        if volume_data.get("tasks") and len(volume_data["tasks"]) > 0:
-            task = volume_data["tasks"][0]
-            print(f"🔍 Step 2 task status: {task.get('status_code')} - {task.get('status_message')}", flush=True)
-            print(f"🔍 Step 2 task cost: {task.get('cost')}", flush=True)
-            print(f"🔍 Step 2 task credits_used: {task.get('credits_used')}", flush=True)
-            result = task.get('result')
-            if result:
-                print(f"🔍 Step 2 result count: {len(result)}", flush=True)
-            else:
-                print(f"🔍 Step 2 result is None (error)", flush=True)
+        # Log Step 2 response summary
+        task = volume_data.get("tasks", [{}])[0] if volume_data.get("tasks") else {}
+        logger.debug(f"Step 2 response: status={volume_data.get('status_code')}, task_status={task.get('status_code')}, cost={task.get('cost')}")
             
         logger.info(f"DataForSEO Step 2 completed: processed {len(keyword_list)} keywords")
     except requests.exceptions.HTTPError as e:
@@ -288,8 +278,7 @@ def fetch_keyword_ideas(
     global _last_step2_cost, _last_total_cost
     _last_step2_cost = volume_tasks[0].get("cost", 0.0)
     _last_total_cost = _last_step1_cost + _last_step2_cost
-    print(f"🔍 Step 2 actual cost from DataForSEO: ${_last_step2_cost:.6f}", flush=True)
-    print(f"💰 TOTAL COST: Step 1=${_last_step1_cost:.6f} + Step 2=${_last_step2_cost:.6f} = ${_last_total_cost:.6f}", flush=True)
+    logger.debug(f"DataForSEO costs: Step1=${_last_step1_cost:.6f}, Step2=${_last_step2_cost:.6f}, Total=${_last_total_cost:.6f}")
     
     volume_result = volume_tasks[0].get("result")
     if not volume_result:
@@ -308,20 +297,6 @@ def fetch_keyword_ideas(
     # CRITICAL: Only use exact values from DataForSEO, never make up numbers
     out: List[Dict] = []
     
-    # DEBUG: Log first few items from DataForSEO response
-    print(f"\n🔍 DataForSEO Step 2 - First 3 keywords with metrics:")
-    for idx, it in enumerate(volume_items[:3]):
-        print(f"  [{idx}] keyword: {it.get('keyword')}")
-        print(f"      search_volume: {it.get('search_volume')}")
-        print(f"      competition: {it.get('competition')}")
-        print(f"      competition_index: {it.get('competition_index')}")
-        print(f"      low_bid: {it.get('low_top_of_page_bid')}")
-        print(f"      high_bid: {it.get('high_top_of_page_bid')}")
-        monthly = it.get("monthly_searches", [])
-        print(f"      monthly_searches count: {len(monthly)}")
-        if monthly:
-            print(f"      latest month volume: {monthly[0].get('search_volume')}")
-    
     for it in volume_items:
         kw = it.get("keyword")
         sv = it.get("search_volume")  # May be None
@@ -334,20 +309,6 @@ def fetch_keyword_ideas(
         # Convert bids from dollars to micros ONLY if value exists
         low_micros = int(round(low_bid * 1_000_000)) if low_bid is not None else None
         high_micros = int(round(high_bid * 1_000_000)) if high_bid is not None else None
-
-        # DEBUG: Log monthly_searches structure for first 3 keywords
-        if keyword_list.index(kw) < 3:
-            print(f"\n🔍 DEBUG: Keyword '{kw}'")
-            print(f"   monthly_searches length: {len(monthly_searches)}")
-            if monthly_searches:
-                print(f"   Monthly data (first 3): {monthly_searches[:3]}")
-                print(f"   Latest month (index 0): {monthly_searches[0]}")
-                if len(monthly_searches) > 2:
-                    print(f"   2 months ago (index 2): {monthly_searches[2]}")
-                if len(monthly_searches) > 11:
-                    print(f"   12 months ago (index 11): {monthly_searches[11]}")
-                if len(monthly_searches) > 12:
-                    print(f"   13 months ago (index 12): {monthly_searches[12]}")
 
         # Calculate YoY change from monthly_searches array ONLY if data exists
         # Proper YoY requires comparing the SAME calendar month from last year
@@ -366,7 +327,6 @@ def fetch_keyword_ideas(
                 # Verify we're comparing same calendar month (e.g., Oct vs Oct, not Oct vs Nov)
                 if current_date[1] == year_ago_date[1] and current_month is not None and year_ago_month is not None and year_ago_month > 0:
                     yoy_change = round(((current_month - year_ago_month) / year_ago_month) * 100, 1)
-                    print(f"   YoY (13+ months, same calendar month): {current_date} {current_month} vs {year_ago_date} {year_ago_month} = {yoy_change}%")
             except (IndexError, KeyError, ZeroDivisionError):
                 pass
         
@@ -381,11 +341,8 @@ def fetch_keyword_ideas(
                 
                 if current_month is not None and year_ago_month is not None and year_ago_month > 0:
                     yoy_change = round(((current_month - year_ago_month) / year_ago_month) * 100, 1)
-                    current_date = (current_month_data.get("year"), current_month_data.get("month"))
-                    year_ago_date = (year_ago_month_data.get("year"), year_ago_month_data.get("month"))
-                    print(f"   YoY (12 months approx): {current_date} {current_month} vs {year_ago_date} {year_ago_month} = {yoy_change}%")
             except (IndexError, KeyError, ZeroDivisionError):
-                print(f"   YoY: Cannot calculate from 12 months of data")
+                pass
 
         out.append({
             "keyword": kw,

@@ -1,3 +1,4 @@
+import logging
 from fastapi import APIRouter, Header, HTTPException, Request
 from firebase_admin import auth as firebase_auth
 from app.services.firestore import db
@@ -6,6 +7,7 @@ from datetime import datetime
 from slowapi import Limiter
 from slowapi.util import get_remote_address
 
+logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/admin", tags=["Admin"])
 limiter = Limiter(key_func=get_remote_address)
 
@@ -257,7 +259,8 @@ def make_tester_by_email(email: str, authorization: str | None = Header(default=
     except firebase_auth.UserNotFoundError:
         raise HTTPException(status_code=404, detail=f"User with email {email} not found")
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error: {str(e)}")
+        logger.error(f"Error making user tester: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to update user role. Please try again.")
 
 
 # -----------------------------------------------------

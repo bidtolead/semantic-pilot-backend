@@ -6,6 +6,9 @@ from firebase_admin import auth as firebase_auth
 from datetime import datetime
 import csv
 import io
+import logging
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/auth", tags=["account"])
 
@@ -144,7 +147,8 @@ def export_research_data(authorization: str | None = Header(default=None)):
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Export failed: {str(e)}")
+        logger.error(f"Export all research failed: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Export failed. Please try again later.")
 
 
 # ----------------------------------------
@@ -276,7 +280,8 @@ def export_single_research(researchId: str, authorization: str | None = Header(d
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Export failed: {str(e)}")
+        logger.error(f"Export single research failed: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Export failed. Please try again later.")
 
 
 # ----------------------------------------
@@ -315,7 +320,8 @@ def update_email_preferences(body: dict, authorization: str | None = Header(defa
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to update preferences: {str(e)}")
+        logger.error(f"Failed to update preferences: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to update preferences. Please try again later.")
 
 
 # ----------------------------------------
@@ -361,11 +367,13 @@ def change_email_address(body: dict, authorization: str | None = Header(default=
 
     except firebase_admin.exceptions.FirebaseError as e:
         # Handle Firebase-specific errors (e.g., email already in use)
-        raise HTTPException(status_code=400, detail=str(e))
+        logger.warning(f"Firebase error changing email: {e}")
+        raise HTTPException(status_code=400, detail="Email change failed. The email may already be in use.")
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to change email: {str(e)}")
+        logger.error(f"Failed to change email: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to change email. Please try again later.")
 
 
 # ----------------------------------------
@@ -415,4 +423,5 @@ def delete_user_account(authorization: str | None = Header(default=None)):
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Account deletion failed: {str(e)}")
+        logger.error(f"Account deletion failed: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Account deletion failed. Please try again later.")

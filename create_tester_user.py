@@ -5,6 +5,9 @@ Create a tester user in Firebase with admin/tester privileges
 import firebase_admin
 from firebase_admin import credentials, firestore, auth
 import sys
+import os
+import secrets
+import string
 
 # Initialize Firebase
 if not firebase_admin._apps:
@@ -12,8 +15,15 @@ if not firebase_admin._apps:
     firebase_admin.initialize_app(creds)
 
 db = firestore.client()
-email = "sasha.schwarzwald@gmail.com"
-password = "TesterPassword123!@#"  # Temporary password - user should reset
+email = os.environ.get("TESTER_EMAIL", "sasha.schwarzwald@gmail.com")
+
+# Generate a secure random password if not provided via env
+def generate_secure_password(length=16):
+    """Generate a secure random password."""
+    chars = string.ascii_letters + string.digits + "!@#$%^&*"
+    return ''.join(secrets.choice(chars) for _ in range(length))
+
+password = os.environ.get("TESTER_PASSWORD") or generate_secure_password()
 
 try:
     # Create user in Firebase Auth

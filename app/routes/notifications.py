@@ -1,9 +1,12 @@
+import logging
 from fastapi import APIRouter, Depends, HTTPException, Body
 from pydantic import BaseModel
 from typing import Optional, List
 from datetime import datetime
 from app.utils.auth import get_current_user, admin_required
 from firebase_admin import firestore
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/notifications", tags=["notifications"])
 db = firestore.client()
@@ -42,7 +45,8 @@ async def list_notifications(user: dict = Depends(get_current_user)):
         
         return {"items": items}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to fetch notifications: {str(e)}")
+        logger.error(f"Failed to fetch notifications: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to fetch notifications. Please try again later.")
 
 @router.post("/{notification_id}/read")
 async def mark_notification_read(notification_id: str, user: dict = Depends(get_current_user)):
@@ -63,7 +67,8 @@ async def mark_notification_read(notification_id: str, user: dict = Depends(get_
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to mark as read: {str(e)}")
+        logger.error(f"Failed to mark notification as read: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to mark as read. Please try again later.")
 
 @router.delete("/{notification_id}")
 async def delete_notification(notification_id: str, user: dict = Depends(get_current_user)):
@@ -84,7 +89,8 @@ async def delete_notification(notification_id: str, user: dict = Depends(get_cur
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to delete notification: {str(e)}")
+        logger.error(f"Failed to delete notification: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to delete notification. Please try again later.")
 
 @router.post("/read-all")
 async def mark_all_read(user: dict = Depends(get_current_user)):
@@ -105,7 +111,8 @@ async def mark_all_read(user: dict = Depends(get_current_user)):
         
         return {"success": True, "updated": count}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to mark all as read: {str(e)}")
+        logger.error(f"Failed to mark all as read: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to mark all as read. Please try again later.")
 
 
 @router.post("/self")
@@ -131,7 +138,8 @@ async def create_self_notification(payload: SelfNotification, user: dict = Depen
             "createdAt": timestamp,
         }
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to create notification: {str(e)}")
+        logger.error(f"Failed to create notification: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to create notification. Please try again later.")
 
 @router.post("/admin/send")
 async def admin_send_notification(
@@ -213,4 +221,5 @@ async def admin_send_notification(
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to send notifications: {str(e)}")
+        logger.error(f"Failed to send notifications: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to send notifications. Please try again later.")
