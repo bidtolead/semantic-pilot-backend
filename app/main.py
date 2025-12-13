@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
+from app.core.config import FRONTEND_URL, FRONTEND_URL_PROD
 
 # Import routers
 from app.routes.intake import router as intake_router
@@ -46,14 +47,19 @@ app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 # -------------------------------------------------
 # CORS settings
 # -------------------------------------------------
+allowed_origins = [
+    FRONTEND_URL,
+    FRONTEND_URL_PROD,
+    "http://localhost:3000",
+    "https://www.semanticpilot.com",
+]
+
 app.add_middleware(
     CORSMiddleware,
-    # Temporarily allow all origins to unblock admin fetches; tighten later
-    allow_origins=["*"],
-    allow_origin_regex=r".*",
+    allow_origins=allowed_origins,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "PATCH"],
+    allow_headers=["Content-Type", "Authorization"],
     expose_headers=["*"],
 )
 

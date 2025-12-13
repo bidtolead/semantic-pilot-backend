@@ -30,7 +30,9 @@ def _json_default(o):
     if hasattr(o, "isoformat"):
         try:
             return o.isoformat()
-        except Exception:
+        except Exception as e:
+            import logging
+            logging.warning(f"Failed to serialize datetime object: {e}")
             return str(o)
     return str(o)
 
@@ -44,8 +46,9 @@ def _get_model_from_settings():
         if settings_doc.exists:
             settings_data = settings_doc.to_dict()
             model = settings_data.get("model", "gpt-4o-mini")
-    except Exception:
-        pass
+    except Exception as e:
+        import logging
+        logging.warning(f"Failed to fetch model from settings: {e}")
     return model
 
 
@@ -62,7 +65,8 @@ def _update_user_metrics(user_id: str, token_usage: dict, cost: float, model: st
             "lastActivity": gcfirestore.SERVER_TIMESTAMP,
         })
     except Exception as e:
-        pass  # Silently fail - metrics are non-critical
+        import logging
+        logging.warning(f"Failed to update user metrics for {user_id}: {e}")
 
 
 def generate_blog_ideas(

@@ -1,10 +1,13 @@
-from fastapi import APIRouter, Header, HTTPException
+from fastapi import APIRouter, Header, HTTPException, Request
 from firebase_admin import auth as firebase_auth
 from app.services.firestore import db
 from app.utils.cost_calculator import get_cost_per_1k_tokens, calculate_openai_cost
 from datetime import datetime
+from slowapi import Limiter
+from slowapi.util import get_remote_address
 
 router = APIRouter(prefix="/admin", tags=["Admin"])
+limiter = Limiter(key_func=get_remote_address)
 
 
 # -----------------------------------------------------
@@ -84,7 +87,8 @@ def require_admin(authorization: str | None):
 # ✅ Quick admin check (lightweight)
 # -----------------------------------------------------
 @router.get("/ping")
-def admin_ping(authorization: str | None = Header(default=None)):
+@limiter.limit("30/minute")
+def admin_ping(request: Request, authorization: str | None = Header(default=None)):
     """Return a simple OK if the requester is an admin or tester."""
     uid = require_admin(authorization)
     
@@ -100,7 +104,8 @@ def admin_ping(authorization: str | None = Header(default=None)):
 # 📌 GET ALL USERS (includes heartbeat → lastActivity)
 # -----------------------------------------------------
 @router.get("/users")
-def get_all_users(authorization: str | None = Header(default=None)):
+@limiter.limit("10/minute")
+def get_all_users(request: Request, authorization: str | None = Header(default=None)):
     """
     Return all users with normalized fields so the frontend
     can safely display them. In particular we normalize the
@@ -168,7 +173,8 @@ def get_all_users(authorization: str | None = Header(default=None)):
 # 📌 Reset Credits
 # -----------------------------------------------------
 @router.post("/user/{uid}/reset-credits")
-def reset_credits(uid: str, authorization: str | None = Header(default=None)):
+@limiter.limit("20/minute")
+def reset_credits(request: Request, uid: str, authorization: str | None = Header(default=None)):
     require_admin(authorization)
 
     db.collection("users").document(uid).update({
@@ -184,7 +190,9 @@ def reset_credits(uid: str, authorization: str | None = Header(default=None)):
 # 📌 Add Credits
 # -----------------------------------------------------
 @router.post("/user/{uid}/add-credits")
+@limiter.limit("20/minute")
 def add_credits(
+    request: Request,
     uid: str,
     credits: int = 10,
     authorization: str | None = Header(default=None),
@@ -211,7 +219,8 @@ def add_credits(
 # 📌 Make Admin
 # -----------------------------------------------------
 @router.post("/user/{uid}/make-admin")
-def make_admin(uid: str, authorization: str | None = Header(default=None)):
+@limiter.limit("10/minute")
+def make_admin(request: Request, uid: str, authorization: str | None = Header(default=None)):
     require_admin(authorization)
 
     db.collection("users").document(uid).update({"role": "admin"})

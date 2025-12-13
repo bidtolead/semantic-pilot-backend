@@ -6,6 +6,10 @@ from pathlib import Path
 env_path = Path(__file__).resolve().parents[2] / ".env"
 load_dotenv(dotenv_path=env_path)
 
+# CORS origins
+FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:3000")
+FRONTEND_URL_PROD = os.getenv("FRONTEND_URL_PROD", "https://semanticpilot.com")
+
 # Stripe settings (will return None if not set yet)
 STRIPE_SECRET_KEY = os.getenv("STRIPE_SECRET_KEY")
 STRIPE_PRICE_PRO = os.getenv("STRIPE_PRICE_PRO")  # price id for Pro plan
